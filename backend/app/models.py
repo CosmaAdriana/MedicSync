@@ -1,0 +1,188 @@
+"""
+MedicSync — ORM Models
+All 7 database tables aligned with tasks.md Phase 1 specifications.
+"""
+
+import enum
+from datetime import date, datetime
+
+from sqlalchemy import (
+    Boolean,
+    Column,
+    Date,
+    DateTime,
+    Enum,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+)
+from sqlalchemy.orm import relationship
+
+from .database import Base
+
+
+# ========================== Enums ==========================================
+
+class RoleEnum(str, enum.Enum):
+    """User roles within the hospital system."""
+    doctor = "doctor"
+    nurse = "nurse"
+    admin = "admin"
+
+
+class PatientStatusEnum(str, enum.Enum):
+    """Current status of a patient."""
+    admitted = "admitted"
+    discharged = "discharged"
+    critical = "critical"
+
+
+class RiskLevelEnum(str, enum.Enum):
+    """Clinical alert severity levels."""
+    low = "low"
+    medium = "medium"
+    high = "high"
+    critical = "critical"
+
+
+# ========================== Models =========================================
+
+class User(Base):
+    """
+    Hospital staff member (doctor, nurse, or admin).
+    Passwords are stored as bcrypt hashes.
+    """
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    full_name = Column(String(150), nullable=False)
+    email = Column(String(255), unique=True, nullable=False, index=True)
+    password_hash = Column(String(255), nullable=False)
+    role = Column(Enum(RoleEnum), nullable=False, default=RoleEnum.nurse)
+
+    # Relationships
+    shifts = relationship("Shift", back_populates="user")
+
+    def __repr__(self) -> str:
+        return f"<User {self.email} ({self.role.value})>"
+
+
+class Patient(Base):
+    """
+    A patient admitted to the hospital ward.
+    """
+    __tablename__ = "patients"
+
+    id = Column(Integer, primary_key=True, index=True)
+    full_name = Column(String(200), nullable=False)
+    admission_date = Column(Date, nullable=False, default=date.today)
+    status = Column(
+        Enum(PatientStatusEnum),
+        nullable=False,
+        default=PatientStatusEnum.admitted,
+    )
+
+    # Relationships
+    vital_signs = relationship("VitalSign", back_populates="patient")
+    clinical_alerts = relationship("ClinicalAlert", back_populates="patient")
+
+    def __repr__(self) -> str:
+        return f"<Patient {self.full_name} ({self.status.value})>"
+
+
+class VitalSign(Base):
+    """
+    Vital signs recorded at the patient's bedside (cap. 1.2.2).
+    Each record is a snapshot in time of the patient's clinical state.
+    """
+    __tablename__ = "vital_signs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    patient_id = Column(Integer, ForeignKey("patients.id"), nullable=False)
+    blood_pressure = Column(String(20), nullable=False)        # e.g. "120/80"
+    pulse = Column(Integer, nullable=False)                     # bpm
+    respiratory_rate = Column(Integer, nullable=False)          # breaths/min
+    oxygen_saturation = Column(Float, nullable=False)           # SpO2 %
+    recorded_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    # Relationships
+    patient = relationship("Patient", back_populates="vital_signs")
+
+    def __repr__(self) -> str:
+        return f"<VitalSign patient={self.patient_id} @ {self.recorded_at}>"
+
+
+class ClinicalAlert(Base):
+    """
+    Automated clinical alert generated when vital signs indicate risk.
+    Links to the patient whose condition triggered it.
+    """
+    __tablename__ = "clinical_alerts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    patient_id = Column(Integer, ForeignKey("patients.id"), nullable=False)
+    risk_level = Column(Enum(RiskLevelEnum), nullable=False)
+    message = Column(Text, nullable=False)
+    is_resolved = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    # Relationships
+    patient = relationship("Patient", back_populates="clinical_alerts")
+
+    def __repr__(self) -> str:
+        return f"<ClinicalAlert patient={self.patient_id} level={self.risk_level.value}>"
+
+
+class InventoryItem(Base):
+    """
+    Medical supply tracked under FEFO policy (cap. 1.3.3).
+    ExpirationDate is required for First-Expired-First-Out logic.
+    """
+    __tablename__ = "inventory_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    product_name = Column(String(200), nullable=False)
+    current_stock = Column(Integer, nullable=False, default=0)
+    expiration_date = Column(Date, nullable=False)
+
+    def __repr__(self) -> str:
+        return f"<InventoryItem {self.product_name} qty={self.current_stock}>"
+
+
+class Shift(Base):
+    """
+    Work shift assigned to a staff member (cap. 1.2.1).
+    Used for staff scheduling optimization.
+    """
+    __tablename__ = "shifts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    start_time = Column(DateTime, nullable=False)
+    end_time = Column(DateTime, nullable=False)
+
+    # Relationships
+    user = relationship("User", back_populates="shifts")
+
+    def __repr__(self) -> str:
+        return f"<Shift user={self.user_id} {self.start_time} → {self.end_time}>"
+
+
+class DailyPatientFlow(Base):
+    """
+    Historical daily patient admission data with exogenous variables
+    for ML prediction (cap. 1.3.3).
+    """
+    __tablename__ = "daily_patient_flow"
+
+    id = Column(Integer, primary_key=True, index=True)
+    date = Column(Date, unique=True, nullable=False)
+    patient_count = Column(Integer, nullable=False)
+    weather_temp = Column(Float, nullable=True)         # °C — exogenous variable
+    is_holiday = Column(Boolean, nullable=False, default=False)
+    is_epidemic = Column(Boolean, nullable=False, default=False)
+
+    def __repr__(self) -> str:
+        return f"<DailyPatientFlow {self.date} count={self.patient_count}>"
