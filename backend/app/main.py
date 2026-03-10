@@ -6,6 +6,7 @@ Run with:  uvicorn app.main:app --reload
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from .database import Base, engine
 
@@ -33,6 +34,21 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# ---------------------------------------------------------------------------
+# CORS Configuration (Required for React & Streamlit)
+# ---------------------------------------------------------------------------
+origins = [
+    "http://localhost:3000",  # React default port
+    "http://localhost:8501",  # Streamlit default port
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],      # In development, allow all. In prod, use 'origins' list
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # ---------------------------------------------------------------------------
 # Health-check endpoint

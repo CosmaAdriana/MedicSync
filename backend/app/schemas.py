@@ -79,12 +79,44 @@ class ClinicalAlertOut(BaseModel):
     is_resolved: bool
     created_at: datetime
 
+# ========================== OrderItem =====================================
+
+class OrderItemCreate(BaseModel):
+    inventory_item_id: int
+    quantity: int
+    unit_price: float
+
+class OrderItemOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    
+    id: int
+    inventory_item_id: int
+    quantity: int
+    unit_price: float
+
+# ========================== Order =========================================
+
+class OrderCreate(BaseModel):
+    created_by: int
+    items: list[OrderItemCreate] 
+
+class OrderOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    created_by: int
+    status: str
+    total_amount: float
+    created_at: datetime
+    items: list[OrderItemOut] = []
+
 
 # ========================== InventoryItem =================================
 
 class InventoryItemCreate(BaseModel):
     product_name: str
     current_stock: int = 0
+    min_stock_level: int = 0
     expiration_date: date
 
 
@@ -94,6 +126,7 @@ class InventoryItemOut(BaseModel):
     id: int
     product_name: str
     current_stock: int
+    min_stock_level: int
     expiration_date: date
 
 

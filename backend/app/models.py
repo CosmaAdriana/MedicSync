@@ -29,7 +29,9 @@ class RoleEnum(str, enum.Enum):
     """User roles within the hospital system."""
     doctor = "doctor"
     nurse = "nurse"
-    admin = "admin"
+    manager = "manager"
+    inventory_manager = "inventory_manager"
+
 
 
 class PatientStatusEnum(str, enum.Enum):
@@ -46,6 +48,13 @@ class RiskLevelEnum(str, enum.Enum):
     high = "high"
     critical = "critical"
 
+class OrderStatusEnum(str, enum.Enum):
+    """Lifecycle of a supply order matching the UML State Machine Diagram."""
+    draft = "draft"
+    placed = "placed"
+    processed = "processed"
+    rejected = "rejected"
+    delivered = "delivered"
 
 # ========================== Models =========================================
 
@@ -134,6 +143,47 @@ class ClinicalAlert(Base):
     def __repr__(self) -> str:
         return f"<ClinicalAlert patient={self.patient_id} level={self.risk_level.value}>"
 
+class Order(Base):
+    """
+    Supply order managed by the logistic admin.
+    Starts as 'draft', moves to 'placed', 'processed', and 'delivered'.
+    """
+    __tablename__ = "orders"
+
+    id = Column(Integer, primary_key=True, index=True)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    status = Column(Enum(OrderStatusEnum), nullable=False, default=OrderStatusEnum.draft)
+    total_amount = Column(Float, nullable=False, default=0.0)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    # Relationships
+    items = relationship("OrderItem", back_populates="order")
+    admin = relationship("User")
+
+    def __repr__(self) -> str:
+        return f"<Order #{self.id} status={self.status.value}>"
+
+
+class OrderItem(Base):
+    """
+    Association table (N:M) detailing the quantity of each inventory item in an order.
+    Matches the loop fragment in the UML Sequence Diagram.
+    """
+    __tablename__ = "order_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(Integer, ForeignKey("orders.id"), nullable=False)
+    inventory_item_id = Column(Integer, ForeignKey("inventory_items.id"), nullable=False)
+    quantity = Column(Integer, nullable=False)
+    unit_price = Column(Float, nullable=False)
+
+    # Relationships
+    order = relationship("Order", back_populates="items")
+    item = relationship("InventoryItem")
+
+    def __repr__(self) -> str:
+        return f"<OrderItem order={self.order_id} item={self.inventory_item_id} qty={self.quantity}>"
+
 
 class InventoryItem(Base):
     """
@@ -145,6 +195,7 @@ class InventoryItem(Base):
     id = Column(Integer, primary_key=True, index=True)
     product_name = Column(String(200), nullable=False)
     current_stock = Column(Integer, nullable=False, default=0)
+    min_stock_level = Column(Integer, nullable=False, default=0)
     expiration_date = Column(Date, nullable=False)
 
     def __repr__(self) -> str:
