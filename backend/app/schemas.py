@@ -10,6 +10,18 @@ from typing import Optional
 from pydantic import BaseModel, ConfigDict, EmailStr
 
 
+# ========================== Auth ===========================================
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class TokenOut(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+
 # ========================== User ==========================================
 
 class UserCreate(BaseModel):
@@ -97,7 +109,6 @@ class OrderItemOut(BaseModel):
 # ========================== Order =========================================
 
 class OrderCreate(BaseModel):
-    created_by: int
     items: list[OrderItemCreate] 
 
 class OrderOut(BaseModel):

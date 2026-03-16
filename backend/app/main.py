@@ -5,10 +5,15 @@ Run with:  uvicorn app.main:app --reload
 
 from contextlib import asynccontextmanager
 
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .database import Base, engine
+from .routers import auth, patients, vitals, inventory, orders, shifts
+
+# Load environment variables from .env (SECRET_KEY, etc.)
+load_dotenv()
 
 
 # ---------------------------------------------------------------------------
@@ -49,6 +54,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ---------------------------------------------------------------------------
+# Routers — CRUD endpoints
+# ---------------------------------------------------------------------------
+app.include_router(auth.router)
+app.include_router(patients.router)
+app.include_router(vitals.router)
+app.include_router(inventory.router)
+app.include_router(orders.router)
+app.include_router(shifts.router)
+
 
 # ---------------------------------------------------------------------------
 # Health-check endpoint
