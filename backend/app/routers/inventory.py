@@ -1,9 +1,12 @@
 """
 MedicSync — Inventory Router
-GET  /inventory       — view current stock levels (any authenticated user).
-POST /inventory       — add a new product (inventory_manager only).
-PUT  /inventory/{id}  — update stock for a product (inventory_manager only).
+GET  /inventory             — view current stock levels (any authenticated user).
+POST /inventory             — add a new product (inventory_manager only).
+PUT  /inventory/{id}        — update stock for a product (inventory_manager only).
+GET  /inventory/fefo-alerts — FEFO expiration alerts (inventory_manager only).
 """
+
+from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -11,7 +14,7 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..deps import get_current_user, require_role
 from ..models import InventoryItem, User
-from ..schemas import InventoryItemCreate, InventoryItemOut
+from ..schemas import FefoAlertOut, InventoryItemCreate, InventoryItemOut
 
 router = APIRouter(prefix="/inventory", tags=["Inventory"])
 
@@ -30,6 +33,55 @@ def list_inventory(
     🔒 Requires: any authenticated user.
     """
     return db.query(InventoryItem).order_by(InventoryItem.product_name).all()
+
+
+# IMPORTANT: /fefo-alerts must be defined BEFORE /{item_id} to avoid route conflict
+@router.get("/fefo-alerts", response_model=list[FefoAlertOut])
+def get_fefo_alerts(
+    current_user: User = Depends(require_role("inventory_manager")),
+    db: Session = Depends(get_db),
+):
+    """
+    Scan inventory for products approaching or past their expiration date (FEFO policy).
+
+    Returns items ordered by expiration date (First-Expired-First-Out) with severity:
+    - **expired**: already past expiration date
+    - **critical**: expires within 7 days
+    - **warning**: expires within 30 days
+
+    🔒 Requires: **inventory_manager** role.
+    """
+    today = date.today()
+    items = (
+        db.query(InventoryItem)
+        .order_by(InventoryItem.expiration_date.asc())
+        .all()
+    )
+
+    alerts = []
+    for item in items:
+        days_until = (item.expiration_date - today).days
+
+        if days_until < 0:
+            severity = "expired"
+        elif days_until <= 7:
+            severity = "critical"
+        elif days_until <= 30:
+            severity = "warning"
+        else:
+            continue  # No alert needed
+
+        alerts.append(
+            FefoAlertOut(
+                product_name=item.product_name,
+                current_stock=item.current_stock,
+                expiration_date=item.expiration_date,
+                days_until_expiry=days_until,
+                severity=severity,
+            )
+        )
+
+    return alerts
 
 
 @router.post("/", response_model=InventoryItemOut, status_code=201)
@@ -82,3 +134,4 @@ def update_inventory_item(
     db.commit()
     db.refresh(item)
     return item
+

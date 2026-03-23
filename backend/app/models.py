@@ -1,6 +1,5 @@
 """
 MedicSync — ORM Models
-All 7 database tables aligned with tasks.md Phase 1 specifications.
 """
 
 import enum
@@ -103,7 +102,7 @@ class Patient(Base):
 
 class VitalSign(Base):
     """
-    Vital signs recorded at the patient's bedside (cap. 1.2.2).
+    Vital signs recorded at the patient's bedside.
     Each record is a snapshot in time of the patient's clinical state.
     """
     __tablename__ = "vital_signs"
@@ -187,7 +186,7 @@ class OrderItem(Base):
 
 class InventoryItem(Base):
     """
-    Medical supply tracked under FEFO policy (cap. 1.3.3).
+    Medical supply tracked under FEFO policy.
     ExpirationDate is required for First-Expired-First-Out logic.
     """
     __tablename__ = "inventory_items"
@@ -204,7 +203,7 @@ class InventoryItem(Base):
 
 class Shift(Base):
     """
-    Work shift assigned to a staff member (cap. 1.2.1).
+    Work shift assigned to a staff member.
     Used for staff scheduling optimization.
     """
     __tablename__ = "shifts"
@@ -224,7 +223,7 @@ class Shift(Base):
 class DailyPatientFlow(Base):
     """
     Historical daily patient admission data with exogenous variables
-    for ML prediction (cap. 1.3.3).
+    for ML prediction .
     """
     __tablename__ = "daily_patient_flow"
 

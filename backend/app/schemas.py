@@ -177,3 +177,47 @@ class DailyPatientFlowOut(BaseModel):
     weather_temp: Optional[float]
     is_holiday: bool
     is_epidemic: bool
+
+
+# ========================== Decision Support ====================
+
+class VitalSignOutWithAlert(BaseModel):
+    """Response for POST /vitals — includes auto-generated alert if any."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    patient_id: int
+    blood_pressure: str
+    pulse: int
+    respiratory_rate: int
+    oxygen_saturation: float
+    recorded_at: datetime
+    alert: Optional[ClinicalAlertOut] = None
+
+
+class StaffPredictionOut(BaseModel):
+    """Response for GET /predict/staff-needs."""
+    date: str
+    predicted_patients: int
+    recommended_nurses: int
+    model_r2: float
+    model_mae: float
+
+
+class InventoryPredictionItemOut(BaseModel):
+    """Single item in GET /predict/inventory response."""
+    product_name: str
+    current_stock: int
+    min_stock_level: int
+    avg_daily_consumption: float
+    safety_stock: int
+    reorder_needed: bool
+
+
+class FefoAlertOut(BaseModel):
+    """Single item in GET /inventory/fefo-alerts response."""
+    product_name: str
+    current_stock: int
+    expiration_date: date
+    days_until_expiry: int
+    severity: str  # "expired", "critical" (≤7 days), "warning" (≤30 days)

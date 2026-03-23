@@ -10,7 +10,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .database import Base, engine
-from .routers import auth, patients, vitals, inventory, orders, shifts
+from .routers import auth, patients, vitals, inventory, orders, shifts, predictions
 
 # Load environment variables from .env (SECRET_KEY, etc.)
 load_dotenv()
@@ -64,6 +64,7 @@ app.include_router(vitals.router)
 app.include_router(inventory.router)
 app.include_router(orders.router)
 app.include_router(shifts.router)
+app.include_router(predictions.router)
 
 
 # ---------------------------------------------------------------------------
