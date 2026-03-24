@@ -57,6 +57,26 @@ class OrderStatusEnum(str, enum.Enum):
 
 # ========================== Models =========================================
 
+class Department(Base):
+    """
+    Hospital department/section (e.g., UPU, Cardiologie, Pediatrie).
+    Used for organizing staff, patients, and predicting resource needs per section.
+    """
+    __tablename__ = "departments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False, unique=True)
+    description = Column(Text, nullable=True)
+
+    # Relationships
+    patients = relationship("Patient", back_populates="department")
+    shifts = relationship("Shift", back_populates="department")
+    patient_flows = relationship("DailyPatientFlow", back_populates="department")
+
+    def __repr__(self) -> str:
+        return f"<Department {self.name}>"
+
+
 class User(Base):
     """
     Hospital staff member (doctor, nurse, or admin).
@@ -86,6 +106,7 @@ class Patient(Base):
     id = Column(Integer, primary_key=True, index=True)
     full_name = Column(String(200), nullable=False)
     admission_date = Column(Date, nullable=False, default=date.today)
+    department_id = Column(Integer, ForeignKey("departments.id"), nullable=False)
     status = Column(
         Enum(PatientStatusEnum),
         nullable=False,
@@ -93,6 +114,7 @@ class Patient(Base):
     )
 
     # Relationships
+    department = relationship("Department", back_populates="patients")
     vital_signs = relationship("VitalSign", back_populates="patient")
     clinical_alerts = relationship("ClinicalAlert", back_populates="patient")
 
@@ -210,11 +232,13 @@ class Shift(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    department_id = Column(Integer, ForeignKey("departments.id"), nullable=False)
     start_time = Column(DateTime, nullable=False)
     end_time = Column(DateTime, nullable=False)
 
     # Relationships
     user = relationship("User", back_populates="shifts")
+    department = relationship("Department", back_populates="shifts")
 
     def __repr__(self) -> str:
         return f"<Shift user={self.user_id} {self.start_time} → {self.end_time}>"
@@ -223,16 +247,20 @@ class Shift(Base):
 class DailyPatientFlow(Base):
     """
     Historical daily patient admission data with exogenous variables
-    for ML prediction .
+    for ML prediction. Per-department granularity.
     """
     __tablename__ = "daily_patient_flow"
 
     id = Column(Integer, primary_key=True, index=True)
-    date = Column(Date, unique=True, nullable=False)
+    date = Column(Date, nullable=False, index=True)
+    department_id = Column(Integer, ForeignKey("departments.id"), nullable=False)
     patient_count = Column(Integer, nullable=False)
     weather_temp = Column(Float, nullable=True)         # °C — exogenous variable
     is_holiday = Column(Boolean, nullable=False, default=False)
     is_epidemic = Column(Boolean, nullable=False, default=False)
+
+    # Relationships
+    department = relationship("Department", back_populates="patient_flows")
 
     def __repr__(self) -> str:
         return f"<DailyPatientFlow {self.date} count={self.patient_count}>"

@@ -36,12 +36,15 @@ def predict_staff_needs(
     weather_temp: float,
     is_holiday: bool,
     is_epidemic: bool,
+    department_id: int,
+    department_name: str = None,
 ) -> dict:
     """
-    Predict the number of patients and recommended nurses for a given day.
+    Predict the number of patients and recommended nurses for a given day and department.
 
     Returns a dict with:
         - date
+        - department_name (optional)
         - predicted_patients
         - recommended_nurses
         - model_r2
@@ -63,6 +66,7 @@ def predict_staff_needs(
                 "weather_temp": weather_temp,
                 "is_holiday": int(is_holiday),
                 "is_epidemic": int(is_epidemic),
+                "department_id": department_id,
             }
         ],
         columns=feature_cols,
@@ -73,10 +77,15 @@ def predict_staff_needs(
 
     recommended_nurses = math.ceil(predicted_patients / patients_per_nurse)
 
-    return {
+    result = {
         "date": target_date.isoformat(),
         "predicted_patients": predicted_patients,
         "recommended_nurses": recommended_nurses,
         "model_r2": round(bundle["r2"], 4),
         "model_mae": round(bundle["mae"], 2),
     }
+
+    if department_name:
+        result["department_name"] = department_name
+
+    return result

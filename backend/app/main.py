@@ -10,7 +10,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .database import Base, engine
-from .routers import auth, patients, vitals, inventory, orders, shifts, predictions, fhir
+from .routers import auth, patients, vitals, inventory, orders, shifts, predictions, fhir, departments
 
 # Load environment variables from .env (SECRET_KEY, etc.)
 load_dotenv()
@@ -59,6 +59,7 @@ app.add_middleware(
 # Routers — CRUD endpoints
 # ---------------------------------------------------------------------------
 app.include_router(auth.router)
+app.include_router(departments.router)
 app.include_router(patients.router)
 app.include_router(vitals.router)
 app.include_router(inventory.router)

@@ -40,10 +40,26 @@ class UserOut(BaseModel):
     role: str
 
 
+# ========================== Department ====================================
+
+class DepartmentCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+
+
+class DepartmentOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    description: Optional[str]
+
+
 # ========================== Patient =======================================
 
 class PatientCreate(BaseModel):
     full_name: str
+    department_id: int
     admission_date: Optional[date] = None
     status: str = "admitted"  # admitted | discharged | critical
 
@@ -53,6 +69,7 @@ class PatientOut(BaseModel):
 
     id: int
     full_name: str
+    department_id: int
     admission_date: date
     status: str
 
@@ -145,6 +162,7 @@ class InventoryItemOut(BaseModel):
 
 class ShiftCreate(BaseModel):
     user_id: int
+    department_id: int
     start_time: datetime
     end_time: datetime
 
@@ -154,6 +172,7 @@ class ShiftOut(BaseModel):
 
     id: int
     user_id: int
+    department_id: int
     start_time: datetime
     end_time: datetime
 
@@ -162,6 +181,7 @@ class ShiftOut(BaseModel):
 
 class DailyPatientFlowCreate(BaseModel):
     date: date
+    department_id: int
     patient_count: int
     weather_temp: Optional[float] = None
     is_holiday: bool = False
@@ -173,6 +193,7 @@ class DailyPatientFlowOut(BaseModel):
 
     id: int
     date: date
+    department_id: int
     patient_count: int
     weather_temp: Optional[float]
     is_holiday: bool
@@ -198,6 +219,7 @@ class VitalSignOutWithAlert(BaseModel):
 class StaffPredictionOut(BaseModel):
     """Response for GET /predict/staff-needs."""
     date: str
+    department_name: Optional[str] = None
     predicted_patients: int
     recommended_nurses: int
     model_r2: float

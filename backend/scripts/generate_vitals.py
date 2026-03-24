@@ -19,7 +19,7 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from app.database import SessionLocal, engine
-from app.models import Base, Patient, RoleEnum, User, VitalSign
+from app.models import Base, Department, Patient, RoleEnum, User, VitalSign
 
 # --- Configurare ---
 NUM_PATIENTS = 25
@@ -50,6 +50,14 @@ def generate_vitals_data():
     print("INFO: Se generează utilizatori, pacienți și semne vitale...")
 
     try:
+        # 0. Verificare și obținere departamente
+        departments = db.query(Department).all()
+        if not departments:
+            print("ERROR: Nu există departamente în baza de date. Rulează mai întâi: python scripts/generate_patient_flow.py")
+            db.close()
+            return
+        department_ids = [dept.id for dept in departments]
+
         # 1. Creare Utilizatori (Personal Medical)
         users = []
         for _ in range(NUM_NURSES):
@@ -58,11 +66,12 @@ def generate_vitals_data():
             users.append(User(full_name=fake.name(), email=fake.email(), password_hash=get_password_hash("string"), role=RoleEnum.doctor))
         db.bulk_save_objects(users)
 
-        # 2. Creare Pacienți
+        # 2. Creare Pacienți (distribuiți între departamente)
         patients = []
         for _ in range(NUM_PATIENTS):
             admission_date = datetime.now().date() - timedelta(days=random.randint(DAYS_OF_RECORDS, DAYS_OF_RECORDS + 30))
-            patients.append(Patient(full_name=fake.name(), admission_date=admission_date))
+            department_id = random.choice(department_ids)
+            patients.append(Patient(full_name=fake.name(), admission_date=admission_date, department_id=department_id))
         db.bulk_save_objects(patients, return_defaults=True)
 
         # 3. Generare Semne Vitale

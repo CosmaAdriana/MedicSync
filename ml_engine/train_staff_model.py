@@ -3,7 +3,7 @@ MedicSync — ML Staff Prediction Model Training
 Trains a RandomForestRegressor on the `daily_patient_flow` historical data
 to predict the number of patients (and therefore nurses needed) for a given day.
 
-Features:  month, day_of_week, weather_temp, is_holiday, is_epidemic
+Features:  month, day_of_week, weather_temp, is_holiday, is_epidemic, department_id
 Target:    patient_count
 
 """
@@ -51,6 +51,7 @@ def load_data() -> pd.DataFrame:
         data = [
             {
                 "date": r.date,
+                "department_id": r.department_id,
                 "patient_count": r.patient_count,
                 "weather_temp": r.weather_temp,
                 "is_holiday": int(r.is_holiday),
@@ -86,7 +87,7 @@ def train():
     print("[2/4] Se pregătesc feature-urile...")
     df = feature_engineering(df)
 
-    feature_cols = ["month", "day_of_week", "weather_temp", "is_holiday", "is_epidemic"]
+    feature_cols = ["month", "day_of_week", "weather_temp", "is_holiday", "is_epidemic", "department_id"]
     X = df[feature_cols]
     y = df["patient_count"]
 

@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..deps import require_role
-from ..models import InventoryItem, User
+from ..models import Department, InventoryItem, User
 from ..schemas import InventoryPredictionItemOut, StaffPredictionOut
 from ..services.staff_predictor import predict_staff_needs
 
@@ -27,20 +27,37 @@ router = APIRouter(prefix="/predict", tags=["Predictions (AI/ML)"])
 def get_staff_prediction(
     target_date: date = Query(..., alias="date", description="Data pentru predicție (YYYY-MM-DD)"),
     weather_temp: float = Query(..., description="Temperatura estimată (°C)"),
+    department_id: int = Query(..., description="ID-ul departamentului"),
     is_holiday: bool = Query(False, description="Este zi de sărbătoare?"),
     is_epidemic: bool = Query(False, description="Este perioadă de epidemie?"),
     current_user: User = Depends(require_role("manager")),
+    db: Session = Depends(get_db),
 ):
     """
-    Predict the number of patients and recommended nursing staff for a given day.
+    Predict the number of patients and recommended nursing staff for a given day and department.
 
     Uses a RandomForest model trained on 3 years of historical admission data,
-    taking into account seasonality, weather, holidays, and epidemic periods.
+    taking into account seasonality, weather, holidays, epidemic periods, and department type.
 
     🔒 Requires: **manager** role.
     """
+    # Validate department exists and get name
+    department = db.query(Department).filter(Department.id == department_id).first()
+    if not department:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Departamentul cu ID {department_id} nu există.",
+        )
+
     try:
-        result = predict_staff_needs(target_date, weather_temp, is_holiday, is_epidemic)
+        result = predict_staff_needs(
+            target_date,
+            weather_temp,
+            is_holiday,
+            is_epidemic,
+            department_id,
+            department.name,
+        )
         return result
     except FileNotFoundError as e:
         raise HTTPException(
