@@ -20,15 +20,22 @@ MODEL_PATH = os.path.join(
 )
 
 
+_model_cache = None
+
+
 def _load_model():
-    """Load the serialised model bundle from disk."""
+    """Load the serialised model bundle from disk, caching it in memory."""
+    global _model_cache
+    if _model_cache is not None:
+        return _model_cache
     abs_path = os.path.normpath(MODEL_PATH)
     if not os.path.exists(abs_path):
         raise FileNotFoundError(
             f"Modelul ML nu a fost găsit la '{abs_path}'. "
             "Rulează mai întâi: python ml_engine/train_staff_model.py"
         )
-    return joblib.load(abs_path)
+    _model_cache = joblib.load(abs_path)
+    return _model_cache
 
 
 def predict_staff_needs(

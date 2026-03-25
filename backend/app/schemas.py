@@ -28,7 +28,8 @@ class UserCreate(BaseModel):
     full_name: str
     email: str
     password: str
-    role: str = "nurse"  # doctor | nurse | admin
+    role: str = "nurse"  # doctor | nurse | manager | inventory_manager
+    department_id: Optional[int] = None
 
 
 class UserOut(BaseModel):
@@ -38,6 +39,7 @@ class UserOut(BaseModel):
     full_name: str
     email: str
     role: str
+    department_id: Optional[int] = None
 
 
 # ========================== Department ====================================
@@ -62,6 +64,10 @@ class PatientCreate(BaseModel):
     department_id: int
     admission_date: Optional[date] = None
     status: str = "admitted"  # admitted | discharged | critical
+
+
+class PatientStatusUpdate(BaseModel):
+    status: str  # admitted | discharged | critical
 
 
 class PatientOut(BaseModel):
@@ -146,6 +152,7 @@ class InventoryItemCreate(BaseModel):
     current_stock: int = 0
     min_stock_level: int = 0
     expiration_date: date
+    department_id: Optional[int] = None
 
 
 class InventoryItemOut(BaseModel):
@@ -156,6 +163,7 @@ class InventoryItemOut(BaseModel):
     current_stock: int
     min_stock_level: int
     expiration_date: date
+    department_id: Optional[int] = None
 
 
 # ========================== Shift =========================================

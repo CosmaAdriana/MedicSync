@@ -23,13 +23,13 @@ router = APIRouter(prefix="/orders", tags=["Orders"])
 # ---------------------------------------------------------------------------
 @router.get("/", response_model=list[OrderOut])
 def list_orders(
-    current_user: User = Depends(require_role("inventory_manager")),
+    current_user: User = Depends(require_role("inventory_manager", "manager")),
     db: Session = Depends(get_db),
 ):
     """
     Return all supply orders (newest first).
 
-    🔒 Requires: **inventory_manager** role.
+    🔒 Requires: **inventory_manager** or **manager** role.
     """
     return db.query(Order).order_by(Order.created_at.desc()).all()
 
@@ -37,7 +37,7 @@ def list_orders(
 @router.post("/", response_model=OrderOut, status_code=201)
 def create_order(
     order_in: OrderCreate,
-    current_user: User = Depends(require_role("inventory_manager")),
+    current_user: User = Depends(require_role("inventory_manager", "manager")),
     db: Session = Depends(get_db),
 ):
     """
@@ -95,7 +95,7 @@ _VALID_TRANSITIONS = {
 def update_order_status(
     order_id: int,
     new_status: str,
-    current_user: User = Depends(require_role("inventory_manager")),
+    current_user: User = Depends(require_role("inventory_manager", "manager")),
     db: Session = Depends(get_db),
 ):
     """

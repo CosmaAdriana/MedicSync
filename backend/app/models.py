@@ -89,9 +89,11 @@ class User(Base):
     email = Column(String(255), unique=True, nullable=False, index=True)
     password_hash = Column(String(255), nullable=False)
     role = Column(Enum(RoleEnum), nullable=False, default=RoleEnum.nurse)
+    department_id = Column(Integer, ForeignKey("departments.id"), nullable=True, index=True)
 
     # Relationships
     shifts = relationship("Shift", back_populates="user")
+    department = relationship("Department", foreign_keys=[department_id])
 
     def __repr__(self) -> str:
         return f"<User {self.email} ({self.role.value})>"
@@ -106,7 +108,7 @@ class Patient(Base):
     id = Column(Integer, primary_key=True, index=True)
     full_name = Column(String(200), nullable=False)
     admission_date = Column(Date, nullable=False, default=date.today)
-    department_id = Column(Integer, ForeignKey("departments.id"), nullable=False)
+    department_id = Column(Integer, ForeignKey("departments.id"), nullable=False, index=True)
     status = Column(
         Enum(PatientStatusEnum),
         nullable=False,
@@ -130,7 +132,7 @@ class VitalSign(Base):
     __tablename__ = "vital_signs"
 
     id = Column(Integer, primary_key=True, index=True)
-    patient_id = Column(Integer, ForeignKey("patients.id"), nullable=False)
+    patient_id = Column(Integer, ForeignKey("patients.id"), nullable=False, index=True)
     blood_pressure = Column(String(20), nullable=False)        # e.g. "120/80"
     pulse = Column(Integer, nullable=False)                     # bpm
     respiratory_rate = Column(Integer, nullable=False)          # breaths/min
@@ -152,7 +154,7 @@ class ClinicalAlert(Base):
     __tablename__ = "clinical_alerts"
 
     id = Column(Integer, primary_key=True, index=True)
-    patient_id = Column(Integer, ForeignKey("patients.id"), nullable=False)
+    patient_id = Column(Integer, ForeignKey("patients.id"), nullable=False, index=True)
     risk_level = Column(Enum(RiskLevelEnum), nullable=False)
     message = Column(Text, nullable=False)
     is_resolved = Column(Boolean, nullable=False, default=False)
@@ -193,8 +195,8 @@ class OrderItem(Base):
     __tablename__ = "order_items"
 
     id = Column(Integer, primary_key=True, index=True)
-    order_id = Column(Integer, ForeignKey("orders.id"), nullable=False)
-    inventory_item_id = Column(Integer, ForeignKey("inventory_items.id"), nullable=False)
+    order_id = Column(Integer, ForeignKey("orders.id"), nullable=False, index=True)
+    inventory_item_id = Column(Integer, ForeignKey("inventory_items.id"), nullable=False, index=True)
     quantity = Column(Integer, nullable=False)
     unit_price = Column(Float, nullable=False)
 
@@ -218,6 +220,9 @@ class InventoryItem(Base):
     current_stock = Column(Integer, nullable=False, default=0)
     min_stock_level = Column(Integer, nullable=False, default=0)
     expiration_date = Column(Date, nullable=False)
+    department_id = Column(Integer, ForeignKey("departments.id"), nullable=True, index=True)
+
+    department = relationship("Department", foreign_keys=[department_id])
 
     def __repr__(self) -> str:
         return f"<InventoryItem {self.product_name} qty={self.current_stock}>"
@@ -231,8 +236,8 @@ class Shift(Base):
     __tablename__ = "shifts"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    department_id = Column(Integer, ForeignKey("departments.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    department_id = Column(Integer, ForeignKey("departments.id"), nullable=False, index=True)
     start_time = Column(DateTime, nullable=False)
     end_time = Column(DateTime, nullable=False)
 
@@ -253,7 +258,7 @@ class DailyPatientFlow(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     date = Column(Date, nullable=False, index=True)
-    department_id = Column(Integer, ForeignKey("departments.id"), nullable=False)
+    department_id = Column(Integer, ForeignKey("departments.id"), nullable=False, index=True)
     patient_count = Column(Integer, nullable=False)
     weather_temp = Column(Float, nullable=True)         # °C — exogenous variable
     is_holiday = Column(Boolean, nullable=False, default=False)

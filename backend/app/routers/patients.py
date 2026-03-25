@@ -6,19 +6,20 @@ GET  /patients/{id}         — patient details.
 GET  /patients/{id}/vitals  — vital signs history for a patient.
 GET  /patients/{id}/alerts  — clinical alerts for a patient.
 
-🔒 Detail/vitals/alerts endpoints require: doctor or nurse role.
+🔒 Detail/vitals/alerts endpoints require: doctor, nurse, or manager role.
 """
 
 from datetime import date
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..deps import require_role
-from ..models import ClinicalAlert, Patient, User, VitalSign
-from ..schemas import ClinicalAlertOut, PatientCreate, PatientOut, VitalSignOut
+from ..deps import get_current_user, require_role
+from ..models import ClinicalAlert, Patient, PatientStatusEnum, User, VitalSign
+from ..schemas import ClinicalAlertOut, PatientCreate, PatientOut, PatientStatusUpdate, VitalSignOut
 
 router = APIRouter(prefix="/patients", tags=["Patients"])
 
@@ -26,18 +27,60 @@ router = APIRouter(prefix="/patients", tags=["Patients"])
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
-@router.get("/", response_model=list[PatientOut])
-def list_patients(
-    status: Optional[str] = Query(None, description="Filter by status: admitted | discharged | critical"),
+@router.get("/hospital-stats")
+def hospital_stats(
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
-    Return all patients, optionally filtered by status.
+    Returns patient counts per department for the entire hospital.
+    No department filtering — visible to all roles.
+    """
+    from ..models import Department
+    rows = (
+        db.query(
+            Department.id.label("department_id"),
+            Department.name.label("department_name"),
+            func.count(Patient.id).label("total"),
+            func.sum(case((Patient.status == PatientStatusEnum.admitted, 1), else_=0)).label("admitted"),
+            func.sum(case((Patient.status == PatientStatusEnum.critical, 1), else_=0)).label("critical"),
+            func.sum(case((Patient.status == PatientStatusEnum.discharged, 1), else_=0)).label("discharged"),
+        )
+        .outerjoin(Patient, Patient.department_id == Department.id)
+        .group_by(Department.id, Department.name)
+        .all()
+    )
+    return [
+        {
+            "department_id": r.department_id,
+            "department_name": r.department_name,
+            "total": r.total or 0,
+            "admitted": r.admitted or 0,
+            "critical": r.critical or 0,
+            "discharged": r.discharged or 0,
+        }
+        for r in rows
+    ]
+
+
+@router.get("/", response_model=list[PatientOut])
+def list_patients(
+    status: Optional[str] = Query(None, description="Filter by status: admitted | discharged | critical"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Return patients. Nurses and doctors see only their department's patients.
+    Managers see all patients.
     """
     query = db.query(Patient)
 
     if status:
         query = query.filter(Patient.status == status)
+
+    # Restrict nurse/doctor to their own department
+    if current_user.role.value in ("nurse", "doctor") and current_user.department_id:
+        query = query.filter(Patient.department_id == current_user.department_id)
 
     return query.order_by(Patient.admission_date.desc()).all()
 
@@ -61,13 +104,13 @@ def create_patient(patient_in: PatientCreate, db: Session = Depends(get_db)):
 @router.get("/{patient_id}", response_model=PatientOut)
 def get_patient(
     patient_id: int,
-    current_user: User = Depends(require_role("doctor", "nurse")),
+    current_user: User = Depends(require_role("doctor", "nurse", "manager")),
     db: Session = Depends(get_db),
 ):
     """
     Return details for a single patient.
 
-    🔒 Requires: **doctor** or **nurse** role.
+    🔒 Requires: **doctor**, **nurse**, or **manager** role.
     """
     patient = db.query(Patient).filter(Patient.id == patient_id).first()
     if not patient:
@@ -78,19 +121,49 @@ def get_patient(
     return patient
 
 
+@router.patch("/{patient_id}/status", response_model=PatientOut)
+def update_patient_status(
+    patient_id: int,
+    body: PatientStatusUpdate,
+    current_user: User = Depends(require_role("doctor", "manager")),
+    db: Session = Depends(get_db),
+):
+    """
+    Update a patient's status (e.g. discharge).
+
+    🔒 Requires: **doctor** or **manager** role.
+    """
+    allowed = {"admitted", "discharged", "critical"}
+    if body.status not in allowed:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Status invalid. Valori acceptate: {', '.join(allowed)}",
+        )
+    patient = db.query(Patient).filter(Patient.id == patient_id).first()
+    if not patient:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Pacientul cu ID {patient_id} nu a fost găsit.",
+        )
+    patient.status = body.status
+    db.commit()
+    db.refresh(patient)
+    return patient
+
+
 @router.get("/{patient_id}/vitals", response_model=list[VitalSignOut])
 def get_patient_vitals(
     patient_id: int,
-    current_user: User = Depends(require_role("doctor", "nurse")),
+    current_user: User = Depends(require_role("doctor", "nurse", "manager")),
     db: Session = Depends(get_db),
 ):
     """
     Return the vital signs history for a patient (newest first).
 
-    🔒 Requires: **doctor** or **nurse** role.
+    🔒 Requires: **doctor**, **nurse**, or **manager** role.
     """
-    patient = db.query(Patient).filter(Patient.id == patient_id).first()
-    if not patient:
+    exists = db.query(Patient.id).filter(Patient.id == patient_id).scalar()
+    if not exists:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Pacientul cu ID {patient_id} nu a fost găsit.",
@@ -106,16 +179,16 @@ def get_patient_vitals(
 @router.get("/{patient_id}/alerts", response_model=list[ClinicalAlertOut])
 def get_patient_alerts(
     patient_id: int,
-    current_user: User = Depends(require_role("doctor", "nurse")),
+    current_user: User = Depends(require_role("doctor", "nurse", "manager")),
     db: Session = Depends(get_db),
 ):
     """
     Return clinical alerts for a patient (newest first).
 
-    🔒 Requires: **doctor** or **nurse** role.
+    🔒 Requires: **doctor**, **nurse**, or **manager** role.
     """
-    patient = db.query(Patient).filter(Patient.id == patient_id).first()
-    if not patient:
+    exists = db.query(Patient.id).filter(Patient.id == patient_id).scalar()
+    if not exists:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Pacientul cu ID {patient_id} nu a fost găsit.",
@@ -126,3 +199,31 @@ def get_patient_alerts(
         .order_by(ClinicalAlert.created_at.desc())
         .all()
     )
+
+
+@router.patch("/{patient_id}/alerts/{alert_id}/resolve", response_model=ClinicalAlertOut)
+def resolve_alert(
+    patient_id: int,
+    alert_id: int,
+    current_user: User = Depends(require_role("doctor", "nurse", "manager")),
+    db: Session = Depends(get_db),
+):
+    """
+    Mark a clinical alert as resolved.
+
+    🔒 Requires: **doctor**, **nurse**, or **manager** role.
+    """
+    alert = (
+        db.query(ClinicalAlert)
+        .filter(ClinicalAlert.id == alert_id, ClinicalAlert.patient_id == patient_id)
+        .first()
+    )
+    if not alert:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Alerta cu ID {alert_id} nu a fost găsită.",
+        )
+    alert.is_resolved = True
+    db.commit()
+    db.refresh(alert)
+    return alert
