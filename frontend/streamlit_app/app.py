@@ -6,16 +6,20 @@ Run with: streamlit run app.py
 import streamlit as st
 import os
 import base64
-import time
-from auth import init_session_state, login_page, register_page, logout, get_user_name, get_user_role
+from auth import (
+    init_session_state, landing_page, login_page, register_page,
+    logout, get_user_name, get_user_role, handle_api_exception
+)
 from config import APP_TITLE, APP_ICON, LAYOUT, INITIAL_SIDEBAR_STATE
 from components.navigation import render_top_nav
+import cache
 
 
 @st.cache_data(show_spinner=False)
 def _load_bg_image(path: str) -> str:
     with open(path, "rb") as f:
         return base64.b64encode(f.read()).decode()
+
 
 ROLE_LABELS = {
     "nurse": "Asistent Medical",
@@ -33,34 +37,43 @@ st.set_page_config(
 
 init_session_state()
 
-if "show_register" not in st.session_state:
-    st.session_state.show_register = False
-
 # ============================================================================
 # Authentication Flow
 # ============================================================================
 if not st.session_state.authenticated:
-    if st.session_state.show_register:
+    auth_view = st.session_state.get("auth_view", "landing")
+    if auth_view == "login":
+        login_page()
+    elif auth_view == "register":
         register_page()
     else:
-        login_page()
+        landing_page()
 
 else:
+    # Încălzește cache-ul în background la prima vizită după login
+    if not st.session_state.get("cache_warmed"):
+        cache.prefetch_all_async(st.session_state.api_client.token)
+        st.session_state.cache_warmed = True
+
     render_top_nav()
 
     # ── Full-page background image ───────────────────────────────────────────
-    img_path = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-        "poza4.png"
-    )
+    root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    img_path = None
+    for ext in ("poza4.jpg", "poza4.png"):
+        p = os.path.join(root, ext)
+        if os.path.exists(p):
+            img_path = p
+            break
 
-    if os.path.exists(img_path):
+    if img_path:
         img_b64 = _load_bg_image(img_path)
+        mime = "image/jpeg" if img_path.endswith(".jpg") else "image/png"
 
         st.markdown(f"""
             <style>
             [data-testid="stAppViewContainer"] {{
-                background-image: url("data:image/png;base64,{img_b64}");
+                background-image: url("data:{mime};base64,{img_b64}");
                 background-size: 100% 100%;
                 background-position: center;
                 background-repeat: no-repeat;
@@ -100,16 +113,10 @@ else:
         </div>
     """, unsafe_allow_html=True)
 
-    # Stats cards — cached for 60s to avoid re-fetching on every interaction
     try:
         api = st.session_state.api_client
-        _now = time.time()
-        if "stats_cache_time" not in st.session_state or _now - st.session_state.stats_cache_time > 60:
-            st.session_state.stats_departments = api.get_departments()
-            st.session_state.stats_patients = api.get_patients()
-            st.session_state.stats_cache_time = _now
-        departments = st.session_state.stats_departments
-        all_patients = st.session_state.stats_patients
+        departments  = cache.get_departments(api.token)
+        all_patients = cache.get_patients(api.token)
 
         admitted = [p for p in all_patients if p.get('status') == 'admitted']
         critical = [p for p in all_patients if p.get('status') == 'critical']
@@ -117,7 +124,7 @@ else:
         _, c1, c2, c3, _ = st.columns([1, 1, 1, 1, 1])
 
         for col, icon, label, value, color in [
-            (c1, "🏛️", "Departamente",     len(departments), "#1f77b4"),
+            (c1, "🏛️", "Departamente",      len(departments), "#1f77b4"),
             (c2, "✅", "Pacienți Internați", len(admitted),    "#2ca02c"),
             (c3, "🚨", "Pacienți Critici",   len(critical),    "#d62728"),
         ]:
@@ -139,7 +146,8 @@ else:
             """, unsafe_allow_html=True)
 
     except Exception as e:
-        st.error(f"Eroare la încărcarea statisticilor: {str(e)}")
+        if not handle_api_exception(e):
+            st.error(f"Eroare la încărcarea statisticilor: {str(e)}")
 
     st.markdown("""
         <p style="

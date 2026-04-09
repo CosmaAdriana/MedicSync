@@ -5,12 +5,13 @@ Machine Learning pentru predicția nevoilor de personal medical.
 import streamlit as st
 import sys
 import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
-# Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from auth import require_auth
+from auth import require_auth, handle_api_exception
 from components.navigation import render_top_nav
+import cache
 from datetime import date, timedelta
 import pandas as pd
 import plotly.express as px
@@ -46,11 +47,11 @@ st.markdown("---")
 # ============================================================================
 st.subheader("📊 Configurare Predicție")
 
-# Fetch departments
 try:
-    departments = api.get_departments()
+    departments  = cache.get_departments(api.token)
     dept_options = {d['name']: d['id'] for d in departments}
 except Exception as e:
+    handle_api_exception(e)
     st.error(f"Eroare la încărcarea departamentelor: {str(e)}")
     st.stop()
 
@@ -134,43 +135,47 @@ st.markdown("---")
 # ============================================================================
 if st.button("🚀 Generează Predicții", use_container_width=True, type="primary"):
     results = []
+    errors  = []
 
-    # Progress bar
     progress_bar = st.progress(0)
-    status_text = st.empty()
+    status_text  = st.empty()
+    status_text.text(f"Se generează {len(selected_depts)} predicții în paralel...")
 
-    for i, dept_name in enumerate(selected_depts):
-        dept_id = dept_options[dept_name]
-        status_text.text(f"Generare predicție pentru {dept_name}...")
+    def _predict(dept_name: str):
+        return dept_name, api.predict_staff_needs(
+            date=str(target_date),
+            weather_temp=weather_temp,
+            department_id=dept_options[dept_name],
+            is_holiday=is_holiday,
+            is_epidemic=is_epidemic,
+        )
 
-        try:
-            result = api.predict_staff_needs(
-                date=str(target_date),
-                weather_temp=weather_temp,
-                department_id=dept_id,
-                is_holiday=is_holiday,
-                is_epidemic=is_epidemic
-            )
-            results.append(result)
+    n = len(selected_depts)
+    with ThreadPoolExecutor(max_workers=min(n, 8)) as ex:
+        futures = {ex.submit(_predict, name): name for name in selected_depts}
+        done = 0
+        for future in as_completed(futures):
+            dept_name = futures[future]
+            try:
+                _, result = future.result()
+                results.append(result)
+            except Exception as e:
+                errors.append(f"Eroare la {dept_name}: {str(e)}")
+            done += 1
+            progress_bar.progress(done / n)
 
-        except Exception as e:
-            st.error(f"Eroare la {dept_name}: {str(e)}")
-
-        progress_bar.progress((i + 1) / len(selected_depts))
+    for err in errors:
+        st.error(err)
 
     status_text.empty()
     progress_bar.empty()
 
-    # ========================================================================
-    # Display Results
-    # ========================================================================
     if results:
         st.success(f"✅ {len(results)} predicții generate cu succes!")
 
         st.markdown("---")
         st.subheader("📊 Rezultate Predicții")
 
-        # Results Table
         df = pd.DataFrame(results)
         display_df = df[['department_name', 'predicted_patients', 'recommended_nurses']]
         display_df.columns = ['Departament', 'Pacienți Prezis', 'Asistente Necesare']
@@ -180,176 +185,79 @@ if st.button("🚀 Generează Predicții", use_container_width=True, type="prima
             use_container_width=True,
             hide_index=True,
             column_config={
-                "Departament": st.column_config.TextColumn("Departament", width="medium"),
-                "Pacienți Prezis": st.column_config.NumberColumn(
-                    "Pacienți Prezis",
-                    width="small",
-                    help="Număr estimat de pacienți"
-                ),
-                "Asistente Necesare": st.column_config.NumberColumn(
-                    "Asistente Necesare",
-                    width="small",
-                    help="Personal recomandat (raport 4 pacienți/asistentă)"
-                )
+                "Departament":        st.column_config.TextColumn("Departament",      width="medium"),
+                "Pacienți Prezis":    st.column_config.NumberColumn("Pacienți Prezis", width="small"),
+                "Asistente Necesare": st.column_config.NumberColumn("Asistente Necesare", width="small"),
             }
         )
 
-        # Summary Statistics
         col_sum1, col_sum2, col_sum3 = st.columns(3)
+        total_patients = sum([r['predicted_patients'] for r in results])
+        total_nurses   = sum([r['recommended_nurses'] for r in results])
+        avg_ratio      = total_patients / total_nurses if total_nurses > 0 else 0
 
-        with col_sum1:
-            total_patients = sum([r['predicted_patients'] for r in results])
-            st.metric(
-                label="Total Pacienți Prezis",
-                value=total_patients
-            )
-
-        with col_sum2:
-            total_nurses = sum([r['recommended_nurses'] for r in results])
-            st.metric(
-                label="Total Asistente Necesare",
-                value=total_nurses
-            )
-
-        with col_sum3:
-            avg_ratio = total_patients / total_nurses if total_nurses > 0 else 0
-            st.metric(
-                label="Raport Pacienți/Asistent",
-                value=f"{avg_ratio:.1f}"
-            )
+        col_sum1.metric("Total Pacienți Prezis",    total_patients)
+        col_sum2.metric("Total Asistente Necesare", total_nurses)
+        col_sum3.metric("Raport Pacienți/Asistent", f"{avg_ratio:.1f}")
 
         st.markdown("---")
-
-        # ====================================================================
-        # Comparison Charts
-        # ====================================================================
         st.subheader("📈 Comparație Vizuală Departamente")
 
-        # Bar Chart - Patients
         col_chart1, col_chart2 = st.columns(2)
 
         with col_chart1:
             fig_patients = px.bar(
-                df,
-                x='department_name',
-                y='predicted_patients',
-                color='predicted_patients',
-                color_continuous_scale='Reds',
+                df, x='department_name', y='predicted_patients',
+                color='predicted_patients', color_continuous_scale='Reds',
                 title='Pacienți Prezis pe Departament',
                 labels={'predicted_patients': 'Pacienți', 'department_name': 'Departament'},
                 text='predicted_patients'
             )
-
             fig_patients.update_traces(textposition='outside')
-            fig_patients.update_layout(
-                showlegend=False,
-                height=450,
-                xaxis_tickangle=-45
-            )
-
+            fig_patients.update_layout(showlegend=False, height=450, xaxis_tickangle=-45)
             st.plotly_chart(fig_patients, use_container_width=True)
 
         with col_chart2:
             fig_nurses = px.bar(
-                df,
-                x='department_name',
-                y='recommended_nurses',
-                color='recommended_nurses',
-                color_continuous_scale='Blues',
+                df, x='department_name', y='recommended_nurses',
+                color='recommended_nurses', color_continuous_scale='Blues',
                 title='Asistente Necesare pe Departament',
                 labels={'recommended_nurses': 'Asistente', 'department_name': 'Departament'},
                 text='recommended_nurses'
             )
-
             fig_nurses.update_traces(textposition='outside')
-            fig_nurses.update_layout(
-                showlegend=False,
-                height=450,
-                xaxis_tickangle=-45
-            )
-
+            fig_nurses.update_layout(showlegend=False, height=450, xaxis_tickangle=-45)
             st.plotly_chart(fig_nurses, use_container_width=True)
 
-        # ====================================================================
-        # Grouped Bar Chart
-        # ====================================================================
         st.markdown("#### 📊 Comparație Directă")
-
         fig_comparison = go.Figure()
-
         fig_comparison.add_trace(go.Bar(
-            x=df['department_name'],
-            y=df['predicted_patients'],
-            name='Pacienți Prezis',
-            marker_color='#d62728',
-            text=df['predicted_patients'],
-            textposition='outside'
+            x=df['department_name'], y=df['predicted_patients'],
+            name='Pacienți Prezis', marker_color='#d62728',
+            text=df['predicted_patients'], textposition='outside'
         ))
-
         fig_comparison.add_trace(go.Bar(
-            x=df['department_name'],
-            y=df['recommended_nurses'],
-            name='Asistente Necesare',
-            marker_color='#1f77b4',
-            text=df['recommended_nurses'],
-            textposition='outside'
+            x=df['department_name'], y=df['recommended_nurses'],
+            name='Asistente Necesare', marker_color='#1f77b4',
+            text=df['recommended_nurses'], textposition='outside'
         ))
-
         fig_comparison.update_layout(
             title='Comparație Pacienți vs. Personal Necesar',
-            xaxis_title='Departament',
-            yaxis_title='Număr',
-            barmode='group',
-            height=500,
-            xaxis_tickangle=-45,
-            legend=dict(
-                orientation="h",
-                yanchor="bottom",
-                y=1.02,
-                xanchor="right",
-                x=1
-            )
+            xaxis_title='Departament', yaxis_title='Număr',
+            barmode='group', height=500, xaxis_tickangle=-45,
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
         )
-
         st.plotly_chart(fig_comparison, use_container_width=True)
 
-        # ====================================================================
-        # Model Metrics
-        # ====================================================================
         st.markdown("---")
         st.subheader("🎯 Metrici Model Machine Learning")
 
         col_metric1, col_metric2, col_metric3, col_metric4 = st.columns(4)
+        col_metric1.metric("Accuracy (R²)",      f"{results[0]['model_r2']:.2%}")
+        col_metric2.metric("Eroare Medie (MAE)", f"{results[0]['model_mae']} pacienți")
+        col_metric3.metric("Dataset Training",   "5,480 înregistrări")
+        col_metric4.metric("Feature-uri",        "6 variabile")
 
-        with col_metric1:
-            st.metric(
-                label="Accuracy (R²)",
-                value=f"{results[0]['model_r2']:.2%}",
-                help="Coeficient de determinare - măsoară cât de bine se potrivește modelul datelor"
-            )
-
-        with col_metric2:
-            st.metric(
-                label="Eroare Medie (MAE)",
-                value=f"{results[0]['model_mae']} pacienți",
-                help="Mean Absolute Error - eroarea medie în predicții"
-            )
-
-        with col_metric3:
-            st.metric(
-                label="Dataset Training",
-                value="5,480 înregistrări",
-                help="3 ani × 5 departamente × 365 zile"
-            )
-
-        with col_metric4:
-            st.metric(
-                label="Feature-uri",
-                value="6 variabile",
-                help="departament, lună, zi săptămână, temp, sărbători, epidemii"
-            )
-
-        # Info about model
         with st.expander("ℹ️ Detalii despre Model", expanded=False):
             st.markdown("""
             ### 🧠 Arhitectura Modelului
@@ -366,39 +274,26 @@ if st.button("🚀 Generează Predicții", use_container_width=True, type="prima
             4. **Day of Week (0.96%)** - Variații zilnice minore
             5. **Month (0.84%)** - Tendințe lunare
             6. **Is Holiday (0.05%)** - Impact redus
-
-            **Cazuri de Utilizare:**
-            - Planificare ture de lucru
-            - Alocare resurse umane
-            - Optimizare costuri operaționale
-            - Pregătire pentru scenarii de criză (epidemii)
             """)
 
-        # ====================================================================
-        # Export / Download Section
-        # ====================================================================
         st.markdown("---")
         st.subheader("💾 Export Rezultate")
 
         col_export1, col_export2 = st.columns(2)
-
         with col_export1:
-            # CSV Download
-            csv_data = df.to_csv(index=False)
             st.download_button(
                 label="📥 Descarcă CSV",
-                data=csv_data,
+                data=df.to_csv(index=False),
                 file_name=f"predictii_ml_{target_date}.csv",
                 mime="text/csv",
                 use_container_width=True
             )
-
         with col_export2:
             st.button(
                 "📊 Generează Raport Excel",
                 use_container_width=True,
                 disabled=True,
-                help="În curând - va include grafice de tură conform Codul Muncii"
+                help="În curând"
             )
 
 else:

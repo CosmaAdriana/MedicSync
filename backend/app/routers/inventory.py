@@ -91,6 +91,7 @@ def create_inventory_item(
         current_stock=item_in.current_stock,
         min_stock_level=item_in.min_stock_level,
         expiration_date=item_in.expiration_date,
+        unit_price=item_in.unit_price,
         department_id=item_in.department_id,
     )
     db.add(item)
@@ -118,6 +119,7 @@ def update_inventory_item(
     item.current_stock = item_in.current_stock
     item.min_stock_level = item_in.min_stock_level
     item.expiration_date = item_in.expiration_date
+    item.unit_price = item_in.unit_price
     if item_in.department_id is not None:
         item.department_id = item_in.department_id
 

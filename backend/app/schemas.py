@@ -152,6 +152,7 @@ class InventoryItemCreate(BaseModel):
     current_stock: int = 0
     min_stock_level: int = 0
     expiration_date: date
+    unit_price: float = 0.0
     department_id: Optional[int] = None
 
 
@@ -163,6 +164,7 @@ class InventoryItemOut(BaseModel):
     current_stock: int
     min_stock_level: int
     expiration_date: date
+    unit_price: float
     department_id: Optional[int] = None
 
 

@@ -3,8 +3,25 @@ MedicSync Frontend - API Client
 Wrapper pentru requests către backend FastAPI.
 """
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from typing import Optional, Dict, Any
 from config import API_BASE_URL
+
+
+class SessionExpiredException(Exception):
+    """Ridicată când backend-ul returnează 401 — token JWT expirat."""
+    pass
+
+
+def _make_session() -> requests.Session:
+    """Creează un requests.Session cu connection pooling și retry automat."""
+    session = requests.Session()
+    retry = Retry(total=3, backoff_factor=0.2, status_forcelist=[500, 502, 503, 504])
+    adapter = HTTPAdapter(max_retries=retry, pool_connections=10, pool_maxsize=20)
+    session.mount("http://", adapter)
+    session.mount("https://", adapter)
+    return session
 
 
 class APIClient:
@@ -13,6 +30,14 @@ class APIClient:
     def __init__(self, base_url: str = API_BASE_URL):
         self.base_url = base_url
         self.token: Optional[str] = None
+        self._session = _make_session()
+
+    def _check(self, response: requests.Response) -> requests.Response:
+        """Verifică răspunsul; ridică SessionExpiredException la 401 doar când utilizatorul era deja autentificat."""
+        if response.status_code == 401 and self.token:
+            raise SessionExpiredException("Sesiunea a expirat.")
+        response.raise_for_status()
+        return response
 
     def set_token(self, token: str):
         """Set JWT token for authenticated requests."""
@@ -30,53 +55,21 @@ class APIClient:
         return headers
 
     def get(self, endpoint: str, params: Optional[Dict] = None) -> Any:
-        """
-        GET request wrapper.
-
-        Args:
-            endpoint: API endpoint (e.g., "/departments/")
-            params: Query parameters
-
-        Returns:
-            JSON response data
-
-        Raises:
-            requests.HTTPError: If request fails
-        """
         url = f"{self.base_url}{endpoint}"
-        response = requests.get(url, headers=self._headers(), params=params)
-        response.raise_for_status()
-        return response.json()
+        return self._check(self._session.get(url, headers=self._headers(), params=params)).json()
 
     def post(self, endpoint: str, data: Dict) -> Any:
-        """
-        POST request wrapper.
-
-        Args:
-            endpoint: API endpoint
-            data: Request body data
-
-        Returns:
-            JSON response data
-        """
         url = f"{self.base_url}{endpoint}"
-        response = requests.post(url, headers=self._headers(), json=data)
-        response.raise_for_status()
-        return response.json()
+        return self._check(self._session.post(url, headers=self._headers(), json=data)).json()
 
     def put(self, endpoint: str, data: Dict) -> Any:
-        """PUT request wrapper."""
         url = f"{self.base_url}{endpoint}"
-        response = requests.put(url, headers=self._headers(), json=data)
-        response.raise_for_status()
-        return response.json()
+        return self._check(self._session.put(url, headers=self._headers(), json=data)).json()
 
     def delete(self, endpoint: str) -> Any:
-        """DELETE request wrapper."""
         url = f"{self.base_url}{endpoint}"
-        response = requests.delete(url, headers=self._headers())
-        response.raise_for_status()
-        return response.json() if response.content else None
+        r = self._check(self._session.delete(url, headers=self._headers()))
+        return r.json() if r.content else None
 
     # ========== Authentication Methods ==========
 
@@ -145,16 +138,12 @@ class APIClient:
     def update_patient_status(self, patient_id: int, new_status: str) -> Dict:
         """Update patient status (doctor/manager only)."""
         url = f"{self.base_url}/patients/{patient_id}/status"
-        response = requests.patch(url, headers=self._headers(), json={"status": new_status})
-        response.raise_for_status()
-        return response.json()
+        return self._check(self._session.patch(url, headers=self._headers(), json={"status": new_status})).json()
 
     def resolve_alert(self, patient_id: int, alert_id: int) -> Dict:
         """Mark a clinical alert as resolved."""
         url = f"{self.base_url}/patients/{patient_id}/alerts/{alert_id}/resolve"
-        response = requests.patch(url, headers=self._headers())
-        response.raise_for_status()
-        return response.json()
+        return self._check(self._session.patch(url, headers=self._headers())).json()
 
     def get_patient_vitals(self, patient_id: int) -> list:
         """Get vital signs for a patient."""
@@ -189,6 +178,7 @@ class APIClient:
 
     def create_inventory_item(self, product_name: str, current_stock: int,
                              min_stock_level: int, expiration_date: str,
+                             unit_price: float = 0.0,
                              department_id: int = None) -> Dict:
         """Create new inventory item."""
         data = {
@@ -196,6 +186,7 @@ class APIClient:
             "current_stock": current_stock,
             "min_stock_level": min_stock_level,
             "expiration_date": expiration_date,
+            "unit_price": unit_price,
         }
         if department_id:
             data["department_id"] = department_id
@@ -255,7 +246,8 @@ class APIClient:
 
     def update_order_status(self, order_id: int, new_status: str) -> Dict:
         """Update order status."""
-        return self.put(f"/orders/{order_id}/status", {"new_status": new_status})
+        url = f"{self.base_url}/orders/{order_id}/status"
+        return self._check(self._session.put(url, headers=self._headers(), params={"new_status": new_status})).json()
 
     # ========== Shifts ==========
 

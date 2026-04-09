@@ -220,6 +220,7 @@ class InventoryItem(Base):
     current_stock = Column(Integer, nullable=False, default=0)
     min_stock_level = Column(Integer, nullable=False, default=0)
     expiration_date = Column(Date, nullable=False)
+    unit_price = Column(Float, nullable=False, default=0.0)
     department_id = Column(Integer, ForeignKey("departments.id"), nullable=True, index=True)
 
     department = relationship("Department", foreign_keys=[department_id])

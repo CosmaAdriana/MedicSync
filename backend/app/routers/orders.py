@@ -130,6 +130,16 @@ def update_order_status(
         )
 
     order.status = target_status
+
+    # La livrare, adaugă cantitățile din comandă înapoi în stocul de inventar
+    if target_status == OrderStatusEnum.delivered:
+        for order_item in order.items:
+            inv_item = db.query(InventoryItem).filter(
+                InventoryItem.id == order_item.inventory_item_id
+            ).first()
+            if inv_item:
+                inv_item.current_stock += order_item.quantity
+
     db.commit()
     db.refresh(order)
     return order

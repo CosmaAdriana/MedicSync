@@ -8,8 +8,9 @@ import os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from auth import require_auth, get_user_role
+from auth import require_auth, get_user_role, handle_api_exception
 from components.navigation import render_top_nav
+import cache
 import plotly.graph_objects as go
 from datetime import datetime
 import pandas as pd
@@ -26,9 +27,9 @@ RISK_LABELS = {
 }
 
 STATUS_RO = {
-    "admitted": "Internat",
-    "critical": "Critic",
-    "discharged": "Externat",
+    "admitted":  "Internat",
+    "critical":  "Critic",
+    "discharged":"Externat",
 }
 
 st.title("💓 Semne Vitale & Monitorizare Clinică")
@@ -43,7 +44,11 @@ user_role = get_user_role()
 st.subheader("👤 Selectare Pacient")
 
 try:
-    patients = api.get_patients(status="admitted") + api.get_patients(status="critical")
+    pts = cache.fetch_parallel(
+        admitted = (cache.get_patients, api.token, "admitted"),
+        critical = (cache.get_patients, api.token, "critical"),
+    )
+    patients = pts["admitted"] + pts["critical"]
 
     if not patients:
         st.warning("⚠️ Nu există pacienți internați în secția ta în acest moment.")
@@ -59,18 +64,17 @@ try:
         options=list(patient_options.keys()),
     )
 
-    patient_id = patient_options[selected_patient_key]
+    patient_id       = patient_options[selected_patient_key]
     selected_patient = next(p for p in patients if p['id'] == patient_id)
 
     st.success(f"✅ Pacient selectat: **{selected_patient['full_name']}**")
     st.markdown("---")
 
     # ========================================================================
-    # Fetch Vitals and Alerts
+    # Fetch Vitals and Alerts — cached per patient
     # ========================================================================
-    with st.spinner("Se încarcă datele medicale..."):
-        vitals = api.get_patient_vitals(patient_id)
-        alerts = api.get_patient_alerts(patient_id)
+    vitals = cache.get_patient_vitals(api.token, patient_id)
+    alerts = cache.get_patient_alerts(api.token, patient_id)
 
     # ========================================================================
     # Clinical Alerts Section
@@ -84,7 +88,7 @@ try:
 
         for alert in unresolved_alerts[:5]:
             icon, label = RISK_LABELS.get(alert['risk_level'], ("⚪", alert['risk_level']))
-            alert_time = datetime.fromisoformat(alert['created_at'].replace('Z', ''))
+            alert_time  = datetime.fromisoformat(alert['created_at'].replace('Z', ''))
 
             col_msg, col_btn = st.columns([4, 1])
             with col_msg:
@@ -105,10 +109,12 @@ try:
                     try:
                         api.resolve_alert(patient_id, alert['id'])
                         st.success("Alertă marcată ca rezolvată!")
+                        cache.get_patient_alerts.clear()
                         import time; time.sleep(1)
                         st.rerun()
                     except Exception as e:
-                        st.error(f"Eroare: {str(e)}")
+                        if not handle_api_exception(e):
+                            st.error(f"Eroare: {str(e)}")
 
         if len(unresolved_alerts) > 5:
             st.info(f"ℹ️ +{len(unresolved_alerts) - 5} alerte suplimentare")
@@ -124,9 +130,9 @@ try:
     st.subheader("📈 Istoric Semne Vitale")
 
     if vitals and len(vitals) > 0:
-        times = [datetime.fromisoformat(v['recorded_at'].replace('Z', '')) for v in vitals]
-        pulse = [v['pulse'] for v in vitals]
-        o2_sat = [v['oxygen_saturation'] for v in vitals]
+        times     = [datetime.fromisoformat(v['recorded_at'].replace('Z', '')) for v in vitals]
+        pulse     = [v['pulse'] for v in vitals]
+        o2_sat    = [v['oxygen_saturation'] for v in vitals]
         resp_rate = [v['respiratory_rate'] for v in vitals]
 
         bp_systolic, bp_diastolic = [], []
@@ -140,13 +146,13 @@ try:
                 bp_diastolic.append(None)
 
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=times, y=pulse, name='Puls (bpm)',
+        fig.add_trace(go.Scatter(x=times, y=pulse,     name='Puls (bpm)',
                                   line=dict(color='#d62728', width=2), mode='lines+markers'))
-        fig.add_trace(go.Scatter(x=times, y=o2_sat, name='SpO₂ (%)',
+        fig.add_trace(go.Scatter(x=times, y=o2_sat,    name='SpO₂ (%)',
                                   line=dict(color='#1f77b4', width=2), mode='lines+markers'))
         fig.add_trace(go.Scatter(x=times, y=resp_rate, name='Frecvență Respiratorie (rpm)',
                                   line=dict(color='#2ca02c', width=2), mode='lines+markers'))
-        fig.add_hline(y=92, line_dash="dash", line_color="red", annotation_text="SpO₂ critic (<92%)")
+        fig.add_hline(y=92,  line_dash="dash", line_color="red",    annotation_text="SpO₂ critic (<92%)")
         fig.add_hline(y=150, line_dash="dash", line_color="orange", annotation_text="Puls critic (>150 bpm)")
         fig.update_layout(
             title="Evoluție Semne Vitale",
@@ -159,12 +165,12 @@ try:
 
         st.markdown("#### 🩺 Tensiune Arterială")
         fig_bp = go.Figure()
-        fig_bp.add_trace(go.Scatter(x=times, y=bp_systolic, name='Sistolică (mmHg)',
+        fig_bp.add_trace(go.Scatter(x=times, y=bp_systolic,  name='Sistolică (mmHg)',
                                      line=dict(color='#d62728', width=2), mode='lines+markers'))
         fig_bp.add_trace(go.Scatter(x=times, y=bp_diastolic, name='Diastolică (mmHg)',
                                      line=dict(color='#ff7f0e', width=2), mode='lines+markers'))
-        fig_bp.add_hline(y=180, line_dash="dash", line_color="red", annotation_text="Hipertensiune critică (>180)")
-        fig_bp.add_hline(y=90, line_dash="dash", line_color="orange", annotation_text="Hipotensiune (<90)")
+        fig_bp.add_hline(y=180, line_dash="dash", line_color="red",    annotation_text="Hipertensiune critică (>180)")
+        fig_bp.add_hline(y=90,  line_dash="dash", line_color="orange", annotation_text="Hipotensiune (<90)")
         fig_bp.update_layout(title="Evoluție Tensiune Arterială", xaxis_title="Data/Ora",
                              yaxis_title="mmHg", hovermode='x unified', height=400)
         st.plotly_chart(fig_bp, use_container_width=True)
@@ -205,8 +211,8 @@ try:
             with col2:
                 resp_input = st.number_input("Frecvență Respiratorie (rpm)", min_value=5, max_value=60,
                                               value=16, step=1, help="Normal: 12-20 rpm")
-                o2_input = st.number_input("Saturație Oxigen — SpO₂ (%)", min_value=50.0, max_value=100.0,
-                                            value=98.0, step=0.1, help="Normal: >95%")
+                o2_input   = st.number_input("Saturație Oxigen — SpO₂ (%)", min_value=50.0, max_value=100.0,
+                                              value=98.0, step=0.1, help="Normal: >95%")
 
             st.markdown("")
             col_btn, col_info = st.columns([1, 2])
@@ -231,14 +237,18 @@ try:
                         st.error(f"🚨 **ALERTĂ CLINICĂ!** {icon} [{label.upper()}] {alert['message']}")
                     else:
                         st.info("ℹ️ Valorile sunt în limite normale.")
+                    cache.get_patient_vitals.clear()
+                    cache.get_patient_alerts.clear()
+                    cache.get_patients.clear()
                     import time; time.sleep(2)
                     st.rerun()
                 except Exception as e:
-                    st.error(f"❌ Eroare la salvare: {str(e)}")
+                    if not handle_api_exception(e):
+                        st.error(f"❌ Eroare la salvare: {str(e)}")
     else:
         st.info("ℹ️ Doar asistenții medicali pot înregistra semne vitale noi.")
 
 except Exception as e:
-    st.error(f"❌ Eroare la încărcarea datelor: {str(e)}")
-    st.exception(e)
-
+    if not handle_api_exception(e):
+        st.error(f"❌ Eroare la încărcarea datelor: {str(e)}")
+        st.exception(e)

@@ -8,9 +8,10 @@ import os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from auth import require_auth, get_user_role
+from auth import require_auth, get_user_role, handle_api_exception
 from components.navigation import render_top_nav
 from components.stats_cards import kpi_card
+import cache
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
@@ -36,19 +37,25 @@ user_dept_id = user.get("department_id")
 
 try:
     with st.spinner("Se încarcă datele..."):
-        departments   = api.get_departments()
-        hospital_stats = api.get_hospital_stats()   # toate departamentele, fără filtrare
-        my_patients   = api.get_patients()           # filtrat după secție pentru nurse/doctor
-        inventory     = api.get_inventory()
+        data = cache.fetch_parallel(
+            departments    = (cache.get_departments,    api.token),
+            hospital_stats = (cache.get_hospital_stats, api.token),
+            my_patients    = (cache.get_patients,       api.token),
+            inventory      = (cache.get_inventory,      api.token),
+        )
+    departments    = data["departments"]
+    hospital_stats = data["hospital_stats"]
+    my_patients    = data["my_patients"]
+    inventory      = data["inventory"]
 
     dept_map = {d['id']: d['name'] for d in departments}
 
     # ── totale spital din hospital_stats ────────────────────────────────────
-    total_admitted  = sum(s['admitted']  for s in hospital_stats)
-    total_critical  = sum(s['critical']  for s in hospital_stats)
+    total_admitted   = sum(s['admitted']   for s in hospital_stats)
+    total_critical   = sum(s['critical']   for s in hospital_stats)
     total_discharged = sum(s['discharged'] for s in hospital_stats)
-    total_patients  = total_admitted + total_critical + total_discharged
-    low_stock       = [i for i in inventory if i['current_stock'] < i['min_stock_level']]
+    total_patients   = total_admitted + total_critical + total_discharged
+    low_stock        = [i for i in inventory if i['current_stock'] < i['min_stock_level']]
 
     # ============================================================
     # SECȚIUNEA 1 — Overview Spital
@@ -143,10 +150,15 @@ try:
     col_r1, col_r2 = st.columns([1, 3])
     with col_r1:
         if st.button("🔄 Reîmprospătare", use_container_width=True):
+            cache.get_departments.clear()
+            cache.get_hospital_stats.clear()
+            cache.get_patients.clear()
+            cache.get_inventory.clear()
             st.rerun()
     with col_r2:
-        st.caption(f"Ultima actualizare: {datetime.now().strftime('%H:%M:%S')}")
+        st.caption(f"Ultima actualizare: {datetime.now().strftime('%H:%M:%S')} · Date reîmprospătate automat la 30s")
 
 except Exception as e:
-    st.error(f"❌ Eroare la încărcarea datelor: {str(e)}")
-    st.exception(e)
+    if not handle_api_exception(e):
+        st.error(f"❌ Eroare la încărcarea datelor: {str(e)}")
+        st.exception(e)

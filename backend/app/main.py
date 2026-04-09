@@ -22,10 +22,17 @@ load_dotenv()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Create all tables on startup (development mode)."""
-    # Import models so they register with Base.metadata
     from . import models  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
+
+    # Preîncarcă modelul ML în memorie la pornire — elimină cold-start la primul request
+    try:
+        from .services.staff_predictor import _load_model
+        _load_model()
+    except Exception:
+        pass  # Modelul nu e antrenat încă — va eșua graceful la primul request
+
     yield
 
 

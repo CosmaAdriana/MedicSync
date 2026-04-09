@@ -8,8 +8,9 @@ import os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from auth import require_auth, get_user_role
+from auth import require_auth, get_user_role, handle_api_exception
 from components.navigation import render_top_nav
+import cache
 import pandas as pd
 from datetime import date
 
@@ -26,13 +27,20 @@ user = st.session_state.user
 user_dept_id = user.get("department_id")
 
 try:
-    departments   = api.get_departments()
-    dept_map      = {d['id']: d['name'] for d in departments}
-    dept_id_map   = {d['name']: d['id'] for d in departments}
+    data = cache.fetch_parallel(
+        departments  = (cache.get_departments, api.token),
+        inventory    = (cache.get_inventory,   api.token),
+        fefo_alerts  = (cache.get_fefo_alerts, api.token),
+    )
+    departments  = data["departments"]
+    dept_map     = {d['id']: d['name'] for d in departments}
+    dept_id_map  = {d['name']: d['id'] for d in departments}
+    _inv_prefetch  = data["inventory"]    # deja în cache, tab-urile îl citesc instant
+    _fefo_prefetch = data["fefo_alerts"]  # idem
 except Exception:
-    departments = []
-    dept_map = {}
-    dept_id_map = {}
+    departments  = []
+    dept_map     = {}
+    dept_id_map  = {}
 
 tab_stoc, tab_alerte, tab_adauga = st.tabs([
     "📋 Stoc Curent",
@@ -45,8 +53,7 @@ tab_stoc, tab_alerte, tab_adauga = st.tabs([
 # ============================================================================
 with tab_stoc:
     try:
-        with st.spinner("Se încarcă inventarul..."):
-            inventory = api.get_inventory()
+        inventory = cache.get_inventory(api.token)
 
         if not inventory:
             st.info("Nu există produse în inventar pentru secția ta.")
@@ -66,7 +73,6 @@ with tab_stoc:
                 filtru = st.selectbox("Filtrează stoc", ["Toate", "Sub stoc minim", "Stoc OK"],
                                       label_visibility="collapsed")
             with col_dept:
-                # Manager poate filtra pe departament
                 if user_role == "manager" and departments:
                     dept_filter_opts = {"Toate departamentele": None}
                     dept_filter_opts.update({d['name']: d['id'] for d in departments})
@@ -99,10 +105,11 @@ with tab_stoc:
             # Actualizare stoc
             st.markdown("---")
             st.markdown("##### ✏️ Actualizează Stoc")
-            inventory_full = api.get_inventory()
+            prod_map = {
+                f"{i['product_name']} — {dept_map.get(i['department_id'], '?')} (ID: {i['id']})": i
+                for i in inventory
+            }
             with st.form("update_stock"):
-                prod_map = {f"{i['product_name']} — {dept_map.get(i['department_id'], '?')} (ID: {i['id']})": i
-                            for i in inventory_full}
                 selected = st.selectbox("Produs", options=list(prod_map.keys()))
                 new_stock = st.number_input("Stoc nou", min_value=0,
                                             value=int(prod_map[selected]['current_stock']))
@@ -110,20 +117,23 @@ with tab_stoc:
                     try:
                         api.update_inventory_stock(prod_map[selected]['id'], new_stock)
                         st.success("✅ Stoc actualizat!")
+                        cache.get_inventory.clear()
+                        cache.get_fefo_alerts.clear()
                         import time; time.sleep(1); st.rerun()
                     except Exception as e:
-                        st.error(f"❌ Eroare: {str(e)}")
+                        if not handle_api_exception(e):
+                            st.error(f"❌ Eroare: {str(e)}")
 
     except Exception as e:
-        st.error(f"❌ Eroare: {str(e)}")
+        if not handle_api_exception(e):
+            st.error(f"❌ Eroare: {str(e)}")
 
 # ============================================================================
 # TAB 2 — Alerte FEFO
 # ============================================================================
 with tab_alerte:
     try:
-        with st.spinner("Se verifică datele de expirare..."):
-            fefo_alerts = api.get_fefo_alerts()
+        fefo_alerts = cache.get_fefo_alerts(api.token)
 
         if not fefo_alerts:
             st.success("✅ Nu există produse expirate sau aproape de expirare!")
@@ -144,12 +154,13 @@ with tab_alerte:
                 days_text = f"Expirat de **{abs(days)} zile**" if days < 0 else f"Expiră în **{days} zile**"
 
                 msg = f"{icon} **{alert['product_name']}** — {days_text} | Expirare: {exp_d} | Stoc: {alert['current_stock']}"
-                if alert['severity'] == 'expired':   st.error(msg)
+                if alert['severity'] == 'expired':    st.error(msg)
                 elif alert['severity'] == 'critical': st.warning(msg)
                 else:                                 st.info(msg)
 
     except Exception as e:
-        st.error(f"❌ Eroare: {str(e)}")
+        if not handle_api_exception(e):
+            st.error(f"❌ Eroare: {str(e)}")
 
 # ============================================================================
 # TAB 3 — Adaugă Produs
@@ -165,12 +176,14 @@ with tab_adauga:
             current_stock = st.number_input("Stoc Inițial *", min_value=0, value=0)
             min_stock     = st.number_input("Stoc Minim *", min_value=0, value=10,
                                              help="Alertă când stocul scade sub această valoare")
+            unit_price    = st.number_input("Preț Unitar (RON) *", min_value=0.01, value=1.0,
+                                             step=0.5, format="%.2f",
+                                             help="Prețul per unitate folosit la comenzi")
 
         with col2:
             exp_date = st.date_input("Dată Expirare *", value=date.today(), min_value=date.today())
 
-            # Selectare departament
-            if user_role == "manager" and departments:
+            if user_role in ("manager", "inventory_manager") and departments:
                 dept_select = st.selectbox("Departament *", options=list(dept_id_map.keys()))
                 selected_dept_id = dept_id_map[dept_select]
             elif user_dept_id:
@@ -198,10 +211,13 @@ with tab_adauga:
                         current_stock=current_stock,
                         min_stock_level=min_stock,
                         expiration_date=str(exp_date),
+                        unit_price=unit_price,
                         department_id=selected_dept_id
                     )
                     dept_name = dept_map.get(selected_dept_id, '')
                     st.success(f"✅ **{product_name}** adăugat în **{dept_name}**!")
+                    cache.get_inventory.clear()
+                    cache.get_fefo_alerts.clear()
                     import time; time.sleep(1); st.rerun()
                 except Exception as e:
                     st.error(f"❌ Eroare: {str(e)}")

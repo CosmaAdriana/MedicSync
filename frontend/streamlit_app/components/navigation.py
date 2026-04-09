@@ -55,7 +55,7 @@ def render_top_nav():
 
     # ── Layout: nav links + user info + logout ──────────────────────────────
     n = len(visible_pages)
-    col_widths = [1] * n + [0.01, 1.4, 0.8]
+    col_widths = [1] * n + [0.01, 1.4, 1.2]
     cols = st.columns(col_widths)
 
     for i, page in enumerate(visible_pages):
@@ -74,7 +74,7 @@ def render_top_nav():
 
     # Logout button
     with cols[n + 2]:
-        if st.button("🚪 Ieșire", use_container_width=True, key="top_nav_logout"):
+        if st.button("🚪 Deconectare", use_container_width=True, key="top_nav_logout"):
             from auth import logout
             logout()
 
