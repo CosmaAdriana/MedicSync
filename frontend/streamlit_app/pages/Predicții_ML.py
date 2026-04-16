@@ -17,7 +17,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-st.set_page_config(page_title="Predicții ML", page_icon="🤖", layout="wide")
+st.set_page_config(page_title="Predicții ML", page_icon="🤖", layout="wide", initial_sidebar_state="collapsed")
 require_auth(allowed_roles=["manager"])
 render_top_nav()
 

@@ -10,7 +10,7 @@ API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
 APP_TITLE = "MedicSync - Health 4.0"
 APP_ICON = "🏥"
 LAYOUT = "wide"
-INITIAL_SIDEBAR_STATE = "collapsed"
+INITIAL_SIDEBAR_STATE = "expanded"
 
 # Theme colors
 PRIMARY_COLOR = "#1f77b4"

@@ -15,7 +15,7 @@ import plotly.graph_objects as go
 from datetime import datetime
 import pandas as pd
 
-st.set_page_config(page_title="Semne Vitale", page_icon="💓", layout="wide")
+st.set_page_config(page_title="Semne Vitale", page_icon="💓", layout="wide", initial_sidebar_state="collapsed")
 require_auth(allowed_roles=["nurse", "doctor", "manager"])
 render_top_nav()
 

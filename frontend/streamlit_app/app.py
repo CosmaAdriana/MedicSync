@@ -57,6 +57,13 @@ else:
 
     render_top_nav()
 
+    # ── Ascunde header Streamlit pe pagina principală ────────────────────────
+    st.markdown("""
+        <style>
+        [data-testid="stHeader"] { background: transparent !important; }
+        </style>
+    """, unsafe_allow_html=True)
+
     # ── Full-page background image ───────────────────────────────────────────
     root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
     img_path = None

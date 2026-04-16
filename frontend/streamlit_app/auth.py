@@ -384,6 +384,7 @@ def logout():
     st.session_state.user = None
     st.session_state.auth_view = "landing"
     st.session_state.cache_warmed = False
+    st.session_state.pop("_sidebar_closed", None)
     st.session_state.api_client.clear_token()
     st.session_state.api_client = APIClient()
     st.rerun()

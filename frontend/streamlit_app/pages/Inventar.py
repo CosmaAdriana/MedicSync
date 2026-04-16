@@ -14,7 +14,7 @@ import cache
 import pandas as pd
 from datetime import date
 
-st.set_page_config(page_title="Inventar", page_icon="📦", layout="wide")
+st.set_page_config(page_title="Inventar", page_icon="📦", layout="wide", initial_sidebar_state="collapsed")
 require_auth(allowed_roles=["manager", "inventory_manager"])
 render_top_nav()
 

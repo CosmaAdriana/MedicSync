@@ -20,7 +20,7 @@ ROLE_LABELS = {
     "inventory_manager": "Manager Inventar",
 }
 
-st.set_page_config(page_title="Departamente", page_icon="🏛️", layout="wide")
+st.set_page_config(page_title="Departamente", page_icon="🏛️", layout="wide", initial_sidebar_state="collapsed")
 require_auth()
 render_top_nav()
 
