@@ -202,7 +202,7 @@ if tab_new is not None:
                     with col_auto:
                         if st.button("🤖 Generează Automat", use_container_width=True, type="secondary",
                                      help="Pre-completează comanda cu toate produsele sub stocul minim"):
-                            new_rows = [
+                            st.session_state.order_rows = [
                                 {
                                     "inv_id": item["id"],
                                     "qty":    max(1, item["min_stock_level"] - item["current_stock"]),
@@ -210,11 +210,8 @@ if tab_new is not None:
                                 }
                                 for item in sub_stoc
                             ]
-                            st.session_state.order_rows = new_rows
-                            # Clear cached widget states so selectboxes use new defaults
-                            for i in range(max(len(new_rows), 20)):
-                                for pfx in ["prod_", "qty_", "price_", "del_"]:
-                                    st.session_state.pop(f"{pfx}{i}", None)
+                            # Versiune noua de widget-uri — garanteaza selectbox fara stare anterioara
+                            st.session_state["gen_v"] = st.session_state.get("gen_v", 0) + 1
                             st.rerun()
                     with col_info:
                         st.info(f"⚠️ **{len(sub_stoc)} produse** sunt sub stocul minim și pot fi comandate automat.")
@@ -228,6 +225,7 @@ if tab_new is not None:
 
                 prod_keys     = list(prod_options.keys())
                 inv_id_to_key = {v["id"]: k for k, v in prod_options.items()}
+                gen_v         = st.session_state.get("gen_v", 0)
 
                 for idx, row in enumerate(st.session_state.order_rows):
                     c1, c2, c3, c4 = st.columns([3, 1, 1.2, 0.4])
@@ -240,18 +238,17 @@ if tab_new is not None:
                             "Produs",
                             options=prod_keys,
                             index=default_idx,
-                            key=f"prod_{idx}",
+                            key=f"prod_{gen_v}_{idx}",
                             label_visibility="collapsed"
                         )
                         selected_item = prod_options[prod_key]
                         st.session_state.order_rows[idx]["inv_id"] = selected_item["id"]
-                        # Prețul vine din inventar — sursa de adevăr
                         st.session_state.order_rows[idx]["price"] = selected_item.get("unit_price", 0.0)
 
                     with c2:
                         qty = st.number_input(
                             "Cant.", min_value=1, value=max(1, row["qty"]),
-                            key=f"qty_{idx}", label_visibility="collapsed"
+                            key=f"qty_{gen_v}_{idx}", label_visibility="collapsed"
                         )
                         st.session_state.order_rows[idx]["qty"] = qty
 
@@ -262,7 +259,7 @@ if tab_new is not None:
                         st.number_input(
                             "Preț/buc (RON)",
                             value=item_price,
-                            key=f"price_{idx}",
+                            key=f"price_{gen_v}_{idx}",
                             label_visibility="collapsed",
                             format="%.2f",
                             disabled=True,
@@ -271,7 +268,7 @@ if tab_new is not None:
 
                     with c4:
                         if len(st.session_state.order_rows) > 1:
-                            if st.button("🗑️", key=f"del_{idx}", help="Șterge rând"):
+                            if st.button("🗑️", key=f"del_{gen_v}_{idx}", help="Șterge rând"):
                                 rows_to_delete.append(idx)
 
                 for idx in reversed(rows_to_delete):

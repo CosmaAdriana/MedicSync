@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..deps import require_role
-from ..models import Patient, User, VitalSign
+from ..models import Patient, PatientStatusEnum, User, VitalSign
 from ..schemas import VitalSignCreate, VitalSignOutWithAlert
 from ..services.clinical_analyzer import analyze_vitals
 
@@ -54,8 +54,12 @@ def record_vitals(
     db.commit()
     db.refresh(vital_sign)
 
-    #Clinical analysis
     alert = analyze_vitals(vital_sign, db)
+
+    if alert and alert.risk_level.value == "critical":
+        patient.status = PatientStatusEnum.critical
+        db.commit()
+        db.refresh(patient)
 
     # Build response with optional alert
     response = {

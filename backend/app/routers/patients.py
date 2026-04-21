@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..deps import get_current_user, require_role
-from ..models import ClinicalAlert, Patient, PatientStatusEnum, User, VitalSign
+from ..models import ClinicalAlert, Patient, PatientStatusEnum, RiskLevelEnum, User, VitalSign
 from ..schemas import ClinicalAlertOut, PatientCreate, PatientOut, PatientStatusUpdate, VitalSignOut
 
 router = APIRouter(prefix="/patients", tags=["Patients"])
@@ -94,6 +94,7 @@ def create_patient(patient_in: PatientCreate, db: Session = Depends(get_db)):
         full_name=patient_in.full_name,
         admission_date=patient_in.admission_date or date.today(),
         status=patient_in.status,
+        department_id=patient_in.department_id,
     )
     db.add(patient)
     db.commit()
@@ -225,5 +226,21 @@ def resolve_alert(
         )
     alert.is_resolved = True
     db.commit()
+
+    remaining = (
+        db.query(ClinicalAlert)
+        .filter(
+            ClinicalAlert.patient_id == patient_id,
+            ClinicalAlert.is_resolved == False,
+            ClinicalAlert.risk_level == RiskLevelEnum.critical,
+        )
+        .count()
+    )
+    if remaining == 0:
+        patient = db.query(Patient).filter(Patient.id == patient_id).first()
+        if patient and patient.status == PatientStatusEnum.critical:
+            patient.status = PatientStatusEnum.admitted
+            db.commit()
+
     db.refresh(alert)
     return alert

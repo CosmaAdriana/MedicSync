@@ -15,9 +15,40 @@ from ..database import get_db
 from ..deps import require_role
 from ..models import Department, InventoryItem, User
 from ..schemas import InventoryPredictionItemOut, StaffPredictionOut
-from ..services.staff_predictor import predict_staff_needs
+from ..services.staff_predictor import predict_staff_needs, _load_model
 
 router = APIRouter(prefix="/predict", tags=["Predictions (AI/ML)"])
+
+
+# ---------------------------------------------------------------------------
+# GET /predict/model-info
+# ---------------------------------------------------------------------------
+@router.get("/model-info")
+def get_model_info(
+    current_user: User = Depends(require_role("manager")),
+):
+    """Return real metrics and feature importances from the trained ML model bundle."""
+    try:
+        bundle = _load_model()
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e))
+
+    model = bundle["model"]
+    feature_cols = bundle["feature_cols"]
+    importances = {
+        col: round(float(imp), 4)
+        for col, imp in zip(feature_cols, model.feature_importances_)
+    }
+    return {
+        "r2": round(float(bundle["r2"]), 4),
+        "mae": round(float(bundle["mae"]), 2),
+        "n_estimators": model.n_estimators,
+        "max_depth": model.max_depth,
+        "patients_per_nurse": bundle["patients_per_nurse"],
+        "feature_importances": dict(
+            sorted(importances.items(), key=lambda x: -x[1])
+        ),
+    }
 
 
 # ---------------------------------------------------------------------------

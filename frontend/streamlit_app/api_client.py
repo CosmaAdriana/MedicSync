@@ -225,6 +225,10 @@ class APIClient:
             "is_epidemic": is_epidemic
         })
 
+    def get_model_info(self) -> Dict:
+        """Get real ML model metrics and feature importances."""
+        return self.get("/predict/model-info")
+
     def predict_inventory_safety_stock(self, lead_time_std: float = 2.0) -> list:
         """Get safety stock predictions for inventory."""
         return self.get("/predict/inventory", params={"lead_time_std": lead_time_std})

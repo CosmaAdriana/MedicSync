@@ -75,7 +75,7 @@ class PatientOut(BaseModel):
 
     id: int
     full_name: str
-    department_id: int
+    department_id: Optional[int] = None
     admission_date: date
     status: str
 
