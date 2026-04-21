@@ -101,8 +101,20 @@ else:
         """, unsafe_allow_html=True)
 
     # ── Greeting & Stats overlay ─────────────────────────────────────────────
-    user_role = get_user_role()
+    user_role  = get_user_role()
     role_label = ROLE_LABELS.get(user_role, user_role)
+    user_obj   = st.session_state.user or {}
+
+    dept_label = ""
+    if user_role in ("nurse", "doctor") and user_obj.get("department_id"):
+        try:
+            depts = cache.get_departments(st.session_state.api_client.token)
+            dept_map = {d["id"]: d["name"] for d in depts}
+            dept_name = dept_map.get(user_obj["department_id"], "")
+            if dept_name:
+                dept_label = f" &nbsp;·&nbsp; 🏥 {dept_name}"
+        except Exception:
+            pass
 
     st.markdown(f"""
         <div style="
@@ -115,7 +127,7 @@ else:
                 Bună, {get_user_name()}! 👋
             </h1>
             <p style="font-size: 1.2rem; opacity: 0.9; margin-bottom: 2.5rem;">
-                {role_label} &nbsp;·&nbsp; MedicSync Health 4.0
+                {role_label}{dept_label} &nbsp;·&nbsp; MedicSync Health 4.0
             </p>
         </div>
     """, unsafe_allow_html=True)

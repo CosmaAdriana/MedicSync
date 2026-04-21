@@ -264,3 +264,49 @@ class APIClient:
             "start_time": start_time,
             "end_time": end_time
         })
+
+    # ========== Schedule / Grafic ==========
+
+    def get_vacation_balance(self, year: int = None) -> Dict:
+        params = {"year": year} if year else {}
+        return self.get("/schedule/balance", params=params)
+
+    def get_vacation_requests(self, department_id: int = None, month: int = None, year: int = None) -> list:
+        params = {}
+        if department_id: params["department_id"] = department_id
+        if month: params["month"] = month
+        if year: params["year"] = year
+        return self.get("/schedule/requests", params=params)
+
+    def create_vacation_request(self, request_type: str, start_date: str,
+                                 end_date: str, notes: str = None) -> Dict:
+        data = {"request_type": request_type, "start_date": start_date, "end_date": end_date}
+        if notes:
+            data["notes"] = notes
+        return self.post("/schedule/requests", data)
+
+    def review_vacation_request(self, request_id: int, status: str) -> Dict:
+        url = f"{self.base_url}/schedule/requests/{request_id}"
+        return self._check(
+            self._session.patch(url, headers=self._headers(), json={"status": status})
+        ).json()
+
+    def generate_schedule(self, department_id: int, year: int, month: int) -> Dict:
+        return self.post("/schedule/generate", {
+            "department_id": department_id, "year": year, "month": month
+        })
+
+    def get_monthly_schedule(self, department_id: int, year: int, month: int) -> Dict:
+        return self.get("/schedule/monthly", params={
+            "department_id": department_id, "year": year, "month": month
+        })
+
+    def save_schedule(self, department_id: int, year: int, month: int,
+                      schedule_data: str, is_finalized: bool = False) -> Dict:
+        return self.post("/schedule/save", {
+            "department_id": department_id,
+            "year": year,
+            "month": month,
+            "schedule_data": schedule_data,
+            "is_finalized": is_finalized,
+        })

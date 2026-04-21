@@ -250,6 +250,67 @@ class Shift(Base):
         return f"<Shift user={self.user_id} {self.start_time} → {self.end_time}>"
 
 
+class VacationRequestStatusEnum(str, enum.Enum):
+    pending = "pending"
+    approved = "approved"
+    rejected = "rejected"
+
+
+class RequestTypeEnum(str, enum.Enum):
+    vacation = "vacation"
+    day_off = "day_off"
+
+
+class VacationRequest(Base):
+    """Cerere de concediu / zi liberă depusă de asistent."""
+    __tablename__ = "vacation_requests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    nurse_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    request_type = Column(Enum(RequestTypeEnum), nullable=False)
+    start_date = Column(Date, nullable=False)
+    end_date = Column(Date, nullable=False)
+    status = Column(Enum(VacationRequestStatusEnum), nullable=False,
+                    default=VacationRequestStatusEnum.pending)
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    reviewed_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    reviewed_at = Column(DateTime, nullable=True)
+
+    nurse = relationship("User", foreign_keys=[nurse_id])
+    reviewer = relationship("User", foreign_keys=[reviewed_by])
+
+
+class VacationBalance(Base):
+    """Soldul de zile de concediu pe an per utilizator."""
+    __tablename__ = "vacation_balances"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    year = Column(Integer, nullable=False)
+    total_days = Column(Integer, nullable=False, default=21)
+    used_days = Column(Integer, nullable=False, default=0)
+
+    user = relationship("User", foreign_keys=[user_id])
+
+
+class MonthlySchedule(Base):
+    """Grafic lunar salvat per departament."""
+    __tablename__ = "monthly_schedules"
+
+    id = Column(Integer, primary_key=True, index=True)
+    department_id = Column(Integer, ForeignKey("departments.id"), nullable=False, index=True)
+    year = Column(Integer, nullable=False)
+    month = Column(Integer, nullable=False)
+    schedule_data = Column(Text, nullable=False)   # JSON
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    is_finalized = Column(Boolean, nullable=False, default=False)
+
+    department = relationship("Department", foreign_keys=[department_id])
+    creator = relationship("User", foreign_keys=[created_by])
+
+
 class DailyPatientFlow(Base):
     """
     Historical daily patient admission data with exogenous variables

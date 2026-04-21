@@ -61,6 +61,22 @@ try:
     # SECȚIUNEA 1 — Overview Spital
     # ============================================================
     st.title("🏥 Dashboard")
+
+    # Banner personalizat pentru asistent / doctor
+    if user_role in ("nurse", "doctor") and user_dept_id:
+        dept_name = dept_map.get(user_dept_id, f"Secția {user_dept_id}")
+        role_label = ROLE_LABELS.get(user_role, user_role)
+        full_name = user.get("full_name", "")
+        st.markdown(
+            f'<div style="background:#eff6ff;border-left:4px solid #3b82f6;'
+            f'border-radius:8px;padding:0.7rem 1.2rem;margin-bottom:1rem;">'
+            f'👋 Bună ziua, <b>{full_name}</b> &nbsp;·&nbsp; '
+            f'<span style="color:#3b82f6;font-weight:600;">{role_label}</span>'
+            f' &nbsp;·&nbsp; 🏥 <b>{dept_name}</b>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
     st.subheader("📊 Overview Spital")
 
     c1, c2, c3, c4 = st.columns(4)

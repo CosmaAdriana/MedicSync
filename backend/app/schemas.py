@@ -246,6 +246,71 @@ class InventoryPredictionItemOut(BaseModel):
     reorder_needed: bool
 
 
+# ========================== Schedule / Grafic =================================
+
+class VacationRequestCreate(BaseModel):
+    request_type: str           # "vacation" | "day_off"
+    start_date: date
+    end_date: date
+    notes: Optional[str] = None
+
+
+class VacationRequestStatusUpdate(BaseModel):
+    status: str                 # "approved" | "rejected"
+
+
+class VacationRequestOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    nurse_id: int
+    nurse_name: Optional[str] = None
+    request_type: str
+    start_date: date
+    end_date: date
+    status: str
+    notes: Optional[str]
+    created_at: datetime
+
+
+class VacationBalanceOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    user_id: int
+    year: int
+    total_days: int
+    used_days: int
+    remaining_days: int
+
+
+class ScheduleGenerateRequest(BaseModel):
+    department_id: int
+    year: int
+    month: int
+
+
+class MonthlyScheduleOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    department_id: int
+    year: int
+    month: int
+    schedule_data: str
+    created_at: datetime
+    is_finalized: bool
+
+
+class ScheduleSaveRequest(BaseModel):
+    department_id: int
+    year: int
+    month: int
+    schedule_data: str          # JSON string
+    is_finalized: bool = False
+
+
+# ========================== FefoAlert =====================================
+
 class FefoAlertOut(BaseModel):
     """Single item in GET /inventory/fefo-alerts response."""
     product_name: str

@@ -14,6 +14,7 @@ PAGES = [
     {"path": "pages/Inventar.py",         "label": "📦 Inventar",     "roles": ["manager", "inventory_manager"]},
     {"path": "pages/Comenzi.py",          "label": "🛒 Comenzi",      "roles": ["manager", "inventory_manager"]},
     {"path": "pages/Predicții_ML.py",     "label": "🤖 Predicții ML", "roles": ["manager"]},
+    {"path": "pages/Grafic.py",            "label": "📅 Grafic Lunar", "roles": ["nurse", "manager"]},
 ]
 
 ROLE_LABELS = {
