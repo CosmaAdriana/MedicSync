@@ -11,8 +11,9 @@ PAGES = [
     {"path": "pages/Departamente.py",     "label": "🏛️ Departamente", "roles": None},
     {"path": "pages/Pacienți.py",         "label": "👤 Pacienți",     "roles": ["doctor", "nurse", "manager"]},
     {"path": "pages/Semne_Vitale.py",     "label": "💓 Semne Vitale", "roles": ["nurse", "doctor", "manager"]},
-    {"path": "pages/Inventar.py",         "label": "📦 Inventar",     "roles": ["manager", "inventory_manager"]},
+    {"path": "pages/Inventar.py",         "label": "📦 Inventar",     "roles": ["manager", "inventory_manager", "nurse"]},
     {"path": "pages/Comenzi.py",          "label": "🛒 Comenzi",      "roles": ["manager", "inventory_manager"]},
+    {"path": "pages/Predicții_Stoc.py",  "label": "📊 Predicții Stoc","roles": ["manager", "inventory_manager"]},
     {"path": "pages/Predicții_ML.py",     "label": "🤖 Predicții ML", "roles": ["manager"]},
     {"path": "pages/Grafic.py",            "label": "📅 Grafic Lunar", "roles": ["nurse", "manager"]},
 ]
@@ -36,18 +37,15 @@ def _get_current_page_hash():
 
 
 def render_top_nav():
-    """
-    Renders a collapsible vertical sidebar navigation.
-    The hamburger button (≡) to open/close it is provided natively by Streamlit.
-    """
-    # ── Închide sidebar la fiecare navigare spre o pagină nouă ───────────────
+    from components.styles import inject_global_css
+    inject_global_css()
+
     current_page = _get_current_page_hash()
     if current_page and current_page != st.session_state.get("_current_page"):
         st.session_state._current_page = current_page
 
     # ── Styles ───────────────────────────────────────────────────────────────
-    st.markdown("""
-        <style>
+    st.markdown("""<style>
         /* Ascunde lista automată de pagini generată de Streamlit */
         [data-testid="stSidebarNav"] { display: none !important; }
 
@@ -146,8 +144,7 @@ def render_top_nav():
             border-color: #dee2e6 !important;
             margin: 0.7rem 0 !important;
         }
-        </style>
-    """, unsafe_allow_html=True)
+        </style>""", unsafe_allow_html=True)
 
     # ── Visible pages per role ───────────────────────────────────────────────
     user_role = None

@@ -32,8 +32,7 @@ STATUS_RO = {
     "discharged":"Externat",
 }
 
-st.title("💓 Semne Vitale & Monitorizare Clinică")
-st.markdown("### Înregistrare și analiză semne vitale cu alertare automată")
+st.title("Semne Vitale")
 
 api = st.session_state.api_client
 user_role = get_user_role()
@@ -41,7 +40,7 @@ user_role = get_user_role()
 # ============================================================================
 # Patient Selection
 # ============================================================================
-st.subheader("👤 Selectare Pacient")
+st.subheader("Selectare pacient")
 
 try:
     pts = cache.fetch_parallel(
@@ -67,7 +66,7 @@ try:
     patient_id       = patient_options[selected_patient_key]
     selected_patient = next(p for p in patients if p['id'] == patient_id)
 
-    st.success(f"✅ Pacient selectat: **{selected_patient['full_name']}**")
+    st.success(f"Pacient selectat: **{selected_patient['full_name']}**")
     st.markdown("---")
 
     # ========================================================================
@@ -79,7 +78,7 @@ try:
     # ========================================================================
     # Clinical Alerts Section
     # ========================================================================
-    st.subheader("🚨 Alerte Clinice Active")
+    st.subheader("Alerte clinice active")
 
     unresolved_alerts = [a for a in alerts if not a['is_resolved']]
 
@@ -101,7 +100,7 @@ try:
                 st.markdown("")
                 st.markdown("")
                 if st.button(
-                    "✅ Rezolvată",
+                    "Rezolvată",
                     key=f"resolve_{alert['id']}",
                     use_container_width=True,
                     help="Marchează alerta ca rezolvată"
@@ -127,7 +126,7 @@ try:
     # ========================================================================
     # Vitals History Chart
     # ========================================================================
-    st.subheader("📈 Istoric Semne Vitale")
+    st.subheader("Istoric semne vitale")
 
     if vitals and len(vitals) > 0:
         times     = [datetime.fromisoformat(v['recorded_at'].replace('Z', '')) for v in vitals]
@@ -163,7 +162,7 @@ try:
         )
         st.plotly_chart(fig, use_container_width=True)
 
-        st.markdown("#### 🩺 Tensiune Arterială")
+        st.markdown("#### Tensiune arterială")
         fig_bp = go.Figure()
         fig_bp.add_trace(go.Scatter(x=times, y=bp_systolic,  name='Sistolică (mmHg)',
                                      line=dict(color='#d62728', width=2), mode='lines+markers'))
@@ -175,7 +174,7 @@ try:
                              yaxis_title="mmHg", hovermode='x unified', height=400)
         st.plotly_chart(fig_bp, use_container_width=True)
 
-        st.markdown("#### 📋 Tabel Înregistrări")
+        st.markdown("#### Înregistrări")
         vitals_df = pd.DataFrame(vitals)
         vitals_df['recorded_at'] = pd.to_datetime(vitals_df['recorded_at']).dt.strftime('%d.%m.%Y %H:%M')
         display_vitals = vitals_df[['recorded_at', 'blood_pressure', 'pulse', 'respiratory_rate', 'oxygen_saturation']]
@@ -191,11 +190,11 @@ try:
     # ========================================================================
     # Record New Vitals (Nurse Only)
     # ========================================================================
-    st.subheader("➕ Înregistrează Semne Vitale Noi")
+    st.subheader("Înregistrează semne vitale")
 
     if user_role == "nurse":
         with st.form("new_vitals", clear_on_submit=False):
-            st.markdown("##### 📝 Formular Semne Vitale")
+            st.markdown("##### Semne vitale noi")
             col1, col2 = st.columns(2)
 
             with col1:
@@ -217,9 +216,9 @@ try:
             st.markdown("")
             col_btn, col_info = st.columns([1, 2])
             with col_btn:
-                submit = st.form_submit_button("💾 Salvează", use_container_width=True, type="primary")
+                submit = st.form_submit_button("Salvează", use_container_width=True, type="primary")
             with col_info:
-                st.caption("ℹ️ Sistemul analizează automat valorile și generează alerte dacă depășesc pragurile clinice.")
+                st.caption("Sistemul analizează automat valorile și generează alerte dacă depășesc pragurile clinice.")
 
             if submit:
                 try:

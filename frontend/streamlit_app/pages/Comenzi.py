@@ -17,7 +17,7 @@ st.set_page_config(page_title="Comenzi", page_icon="🛒", layout="wide", initia
 require_auth(allowed_roles=["inventory_manager", "manager"])
 render_top_nav()
 
-st.title("🛒 Comenzi Aprovizionare")
+st.title("Comenzi")
 
 api       = st.session_state.api_client
 user_role = get_user_role()
@@ -42,10 +42,10 @@ def refresh_orders():
 # ── Tabs ─────────────────────────────────────────────────────────────────────
 if user_role == "inventory_manager":
     tab_active, tab_new, tab_history = st.tabs([
-        "📋 Comenzi Active", "➕ Comandă Nouă", "📜 Istoric"
+        "Comenzi active", "Comandă nouă", "Istoric"
     ])
 else:
-    tab_active, tab_history = st.tabs(["📋 Comenzi Active", "📜 Istoric"])
+    tab_active, tab_history = st.tabs(["Comenzi active", "Istoric"])
     tab_new = None
 
 # ============================================================================
@@ -54,7 +54,7 @@ else:
 with tab_active:
     col_ref, _ = st.columns([1, 5])
     with col_ref:
-        if st.button("🔄 Refresh", use_container_width=True, key="refresh_active"):
+        if st.button("Refresh", use_container_width=True, key="refresh_active"):
             refresh_orders()
             st.rerun()
 
@@ -102,7 +102,7 @@ with tab_active:
 
                         # inventory_manager: plasează draft-ul
                         if user_role == "inventory_manager" and s == "draft":
-                            if st.button("📬 Plasează Comanda", key=f"place_{order['id']}",
+                            if st.button("Plasează comanda", key=f"place_{order['id']}",
                                          use_container_width=True, type="primary"):
                                 try:
                                     api.update_order_status(order["id"], "placed")
@@ -115,7 +115,7 @@ with tab_active:
 
                         # inventory_manager: confirmă livrarea
                         elif user_role == "inventory_manager" and s == "processed":
-                            if st.button("✅ Confirmă Livrarea", key=f"deliver_{order['id']}",
+                            if st.button("Confirmă livrarea", key=f"deliver_{order['id']}",
                                          use_container_width=True, type="primary"):
                                 try:
                                     api.update_order_status(order["id"], "delivered")
@@ -130,7 +130,7 @@ with tab_active:
                         elif user_role == "manager" and s == "placed":
                             c1, c2 = st.columns(2)
                             with c1:
-                                if st.button("✅ Aprobă", key=f"approve_{order['id']}",
+                                if st.button("Aprobă", key=f"approve_{order['id']}",
                                              use_container_width=True, type="primary"):
                                     try:
                                         api.update_order_status(order["id"], "processed")
@@ -141,7 +141,7 @@ with tab_active:
                                         if not handle_api_exception(e):
                                             st.error(f"❌ {str(e)}")
                             with c2:
-                                if st.button("❌ Respinge", key=f"reject_{order['id']}",
+                                if st.button("Respinge", key=f"reject_{order['id']}",
                                              use_container_width=True):
                                     try:
                                         api.update_order_status(order["id"], "rejected")
@@ -156,7 +156,7 @@ with tab_active:
 
                     # Detalii produse
                     if order.get("items"):
-                        with st.expander(f"📦 Produse comandate ({len(order['items'])} articole)"):
+                        with st.expander(f"Produse comandate ({len(order['items'])} articole)"):
                             items_df = pd.DataFrame(order["items"])
                             items_df["subtotal"]   = items_df["quantity"] * items_df["unit_price"]
                             items_df["unit_price"] = items_df["unit_price"].apply(lambda x: f"{x:,.2f} RON")
@@ -176,8 +176,8 @@ with tab_active:
 # ============================================================================
 if tab_new is not None:
     with tab_new:
-        st.subheader("➕ Creează Comandă Nouă")
-        st.info("ℹ️ Adaugă produsele dorite, apoi plasează comanda spre aprobare.")
+        st.subheader("Creează comandă nouă")
+        st.info("Adaugă produsele dorite, apoi plasează comanda spre aprobare.")
 
         # Inițializare sesiune pentru rânduri de produse
         if "order_rows" not in st.session_state:
@@ -200,7 +200,7 @@ if tab_new is not None:
                 if sub_stoc:
                     col_auto, col_info = st.columns([1, 3])
                     with col_auto:
-                        if st.button("🤖 Generează Automat", use_container_width=True, type="secondary",
+                        if st.button("Generează automat", use_container_width=True, type="secondary",
                                      help="Pre-completează comanda cu toate produsele sub stocul minim"):
                             st.session_state.order_rows = [
                                 {
@@ -214,11 +214,11 @@ if tab_new is not None:
                             st.session_state["gen_v"] = st.session_state.get("gen_v", 0) + 1
                             st.rerun()
                     with col_info:
-                        st.info(f"⚠️ **{len(sub_stoc)} produse** sunt sub stocul minim și pot fi comandate automat.")
+                        st.info(f"**{len(sub_stoc)} produse** sunt sub stocul minim și pot fi comandate automat.")
                 else:
                     st.success("✅ Toate produsele au stoc suficient.")
 
-                st.markdown("#### 📦 Produse")
+                st.markdown("#### Produse")
 
                 rows_to_delete = []
                 total_val = 0.0
@@ -293,7 +293,7 @@ if tab_new is not None:
                     st.markdown(f"**Total: {total_val:,.2f} RON**")
 
                 with bc:
-                    if st.button("🚀 Creează & Plasează", use_container_width=True,
+                    if st.button("Creează & Plasează", use_container_width=True,
                                  type="primary", key="create_order"):
                         rows = st.session_state.order_rows
                         if not rows or any(r["inv_id"] is None for r in rows):
@@ -338,9 +338,9 @@ with tab_history:
             total_value     = sum(o["total_amount"] for o in history if o["status"] == "delivered")
 
             c1, c2, c3 = st.columns(3)
-            c1.metric("✅ Livrate",    total_delivered)
-            c2.metric("❌ Respinse",   total_rejected)
-            c3.metric("💰 Val. Livrată", f"{total_value:,.2f} RON")
+            c1.metric("Livrate",    total_delivered)
+            c2.metric("Respinse",   total_rejected)
+            c3.metric("Val. Livrată", f"{total_value:,.2f} RON")
 
             st.markdown("---")
 

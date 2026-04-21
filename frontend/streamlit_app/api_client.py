@@ -192,6 +192,15 @@ class APIClient:
             data["department_id"] = department_id
         return self.post("/inventory/", data)
 
+    def get_consumption_stats(self) -> list:
+        """Consumption stats + order recommendations for inventory predictions."""
+        return self.get("/inventory/consumption-stats")
+
+    def use_inventory_item(self, item_id: int, quantity: int) -> Dict:
+        """Decrease stock by quantity (available to all roles)."""
+        url = f"{self.base_url}/inventory/{item_id}/use"
+        return self._check(self._session.patch(url, headers=self._headers(), json={"quantity": quantity})).json()
+
     def update_inventory_stock(self, item_id: int, current_stock: int,
                               expiration_date: str = None) -> Dict:
         """Update inventory stock levels."""

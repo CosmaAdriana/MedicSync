@@ -93,6 +93,8 @@ def _inject_form_glass_styles():
             border-color: rgba(255, 255, 255, 0.6) !important;
             border-radius: 8px !important;
         }
+        /* Hide "Press Enter to submit" */
+        [data-testid="InputInstructions"] { display: none !important; }
         </style>
     """, unsafe_allow_html=True)
 

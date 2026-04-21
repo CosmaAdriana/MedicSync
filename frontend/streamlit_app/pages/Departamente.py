@@ -24,8 +24,7 @@ st.set_page_config(page_title="Departamente", page_icon="🏛️", layout="wide"
 require_auth()
 render_top_nav()
 
-st.title("🏛️ Management Departamente")
-st.markdown("### Gestionare departamente și secții spitalicești")
+st.title("Departamente")
 
 api = st.session_state.api_client
 user_role = get_user_role()
@@ -39,7 +38,7 @@ try:
     # Departments Table with Statistics
     # ========================================================================
     st.markdown("---")
-    st.subheader("📋 Departamente Existente")
+    st.subheader("Departamente existente")
 
     if departments:
         stats_map  = {s['department_id']: s for s in hospital_stats}
@@ -83,7 +82,7 @@ try:
     # ========================================================================
     # Department Details Cards
     # ========================================================================
-    st.subheader("📊 Detalii Departamente")
+    st.subheader("Detalii")
 
     if departments:
         cols_per_row = 3
@@ -130,7 +129,7 @@ try:
     # ========================================================================
     # Create New Department (Manager Only)
     # ========================================================================
-    st.subheader("➕ Adaugă Departament Nou")
+    st.subheader("Adaugă departament")
 
     if user_role == "manager":
         with st.form("new_department", clear_on_submit=True):
@@ -156,7 +155,7 @@ try:
 
             with col_submit:
                 submit = st.form_submit_button(
-                    "✅ Creează Departament",
+                    "Creează",
                     use_container_width=True,
                     type="primary"
                 )
@@ -182,14 +181,14 @@ try:
                         else:
                             st.error(f"❌ Eroare la crearea departamentului: {str(e)}")
     else:
-        st.info(f"ℹ️ Doar managerii pot crea departamente noi. Rolul tău actual: **{ROLE_LABELS.get(user_role, user_role)}**")
+        st.info(f"Doar managerii pot crea departamente noi. Rolul tău actual: **{ROLE_LABELS.get(user_role, user_role)}**")
 
     # ========================================================================
     # Statistics Summary
     # ========================================================================
     if departments and hospital_stats:
         st.markdown("---")
-        st.subheader("📈 Statistici Rezumat")
+        st.subheader("Statistici")
 
         total_p    = sum(s['total']    for s in hospital_stats)
         total_crit = sum(s['critical'] for s in hospital_stats)

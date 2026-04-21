@@ -2,13 +2,13 @@
 MedicSync — Schedule Router (Grafic Lunar)
 
 Endpoints:
-  GET  /schedule/balance                   — sold concediu utilizator curent
-  GET  /schedule/requests                  — lista cereri (proprii / toate per dept)
-  POST /schedule/requests                  — depune cerere (nurse)
-  PATCH /schedule/requests/{id}            — aprobă/respinge cerere (manager)
-  POST /schedule/generate                  — generează grafic AI (manager)
-  GET  /schedule/monthly                   — grafic salvat
-  POST /schedule/save                      — salvează grafic (manager)
+  GET  /schedule/balance          — sold concediu utilizator curent
+  GET  /schedule/requests         — lista cereri (proprii / toate per dept)
+  POST /schedule/requests         — depune cerere (nurse)
+  PATCH /schedule/requests/{id}   — aprobă/respinge cerere (manager)
+  POST /schedule/generate         — generează grafic AI (manager)
+  GET  /schedule/monthly          — grafic salvat
+  POST /schedule/save             — salvează grafic (manager)
 """
 
 import calendar
@@ -33,9 +33,6 @@ from ..schemas import (
 router = APIRouter(prefix="/schedule", tags=["Schedule"])
 
 
-# ---------------------------------------------------------------------------
-# Helper: sold concediu (auto-create dacă nu există)
-# ---------------------------------------------------------------------------
 def _get_or_create_balance(db: Session, user_id: int, year: int) -> VacationBalance:
     balance = (
         db.query(VacationBalance)
@@ -54,16 +51,12 @@ def _count_days(start: date, end: date) -> int:
     return (end - start).days + 1
 
 
-# ---------------------------------------------------------------------------
-# Sold concediu
-# ---------------------------------------------------------------------------
 @router.get("/balance", response_model=VacationBalanceOut)
 def get_balance(
     year: int = Query(default=None),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Returnează soldul de zile de concediu al utilizatorului curent."""
     if year is None:
         year = date.today().year
     balance = _get_or_create_balance(db, current_user.id, year)
@@ -76,9 +69,6 @@ def get_balance(
     )
 
 
-# ---------------------------------------------------------------------------
-# Cereri concediu / zi liberă
-# ---------------------------------------------------------------------------
 @router.get("/requests", response_model=list[VacationRequestOut])
 def list_requests(
     department_id: int = Query(default=None),
@@ -87,10 +77,6 @@ def list_requests(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """
-    Asistent: vede doar propriile cereri.
-    Manager: vede cererile asistenților din departamentul selectat.
-    """
     from ..models import RoleEnum
 
     q = db.query(VacationRequest)
@@ -98,14 +84,10 @@ def list_requests(
     if current_user.role.value == "nurse":
         q = q.filter(VacationRequest.nurse_id == current_user.id)
     elif current_user.role.value == "manager":
-        # Folosește department_id din query param; fallback la departamentul managerului
         target_dept = department_id or current_user.department_id
         dept_nurses = (
             db.query(User.id)
-            .filter(
-                User.department_id == target_dept,
-                User.role == RoleEnum.nurse,
-            )
+            .filter(User.department_id == target_dept, User.role == RoleEnum.nurse)
             .subquery()
         )
         q = q.filter(VacationRequest.nurse_id.in_(dept_nurses))
@@ -119,10 +101,8 @@ def list_requests(
         )
 
     requests = q.order_by(VacationRequest.created_at.desc()).all()
-
-    result = []
-    for r in requests:
-        out = VacationRequestOut(
+    return [
+        VacationRequestOut(
             id=r.id,
             nurse_id=r.nurse_id,
             nurse_name=r.nurse.full_name if r.nurse else None,
@@ -133,8 +113,8 @@ def list_requests(
             notes=r.notes,
             created_at=r.created_at,
         )
-        result.append(out)
-    return result
+        for r in requests
+    ]
 
 
 @router.post("/requests", response_model=VacationRequestOut, status_code=201)
@@ -143,13 +123,11 @@ def create_request(
     current_user: User = Depends(require_role("nurse")),
     db: Session = Depends(get_db),
 ):
-    """Asistentul depune o cerere de concediu sau zi liberă."""
     if req_in.end_date < req_in.start_date:
         raise HTTPException(status_code=422, detail="Data de sfârșit trebuie să fie după data de început.")
 
     days_requested = _count_days(req_in.start_date, req_in.end_date)
 
-    # Verificare sold pentru concediu
     if req_in.request_type == "vacation":
         balance = _get_or_create_balance(db, current_user.id, req_in.start_date.year)
         remaining = balance.total_days - balance.used_days
@@ -159,7 +137,6 @@ def create_request(
                 detail=f"Sold insuficient: {remaining} zile disponibile, ai solicitat {days_requested}.",
             )
 
-    # Verificare suprapunere cu cereri existente
     overlap = (
         db.query(VacationRequest)
         .filter(
@@ -207,7 +184,6 @@ def review_request(
     current_user: User = Depends(require_role("manager")),
     db: Session = Depends(get_db),
 ):
-    """Managerul aprobă sau respinge o cerere."""
     req = db.query(VacationRequest).filter(VacationRequest.id == request_id).first()
     if not req:
         raise HTTPException(status_code=404, detail="Cererea nu a fost găsită.")
@@ -218,19 +194,15 @@ def review_request(
     old_status = req.status
     new_status = VacationRequestStatusEnum(update.status)
 
-    # La aprobare concediu → scade din sold
     if new_status == VacationRequestStatusEnum.approved and old_status != new_status:
         if req.request_type == RequestTypeEnum.vacation:
             balance = _get_or_create_balance(db, req.nurse_id, req.start_date.year)
-            days = _count_days(req.start_date, req.end_date)
-            balance.used_days = min(balance.used_days + days, balance.total_days)
+            balance.used_days = min(balance.used_days + _count_days(req.start_date, req.end_date), balance.total_days)
 
-    # La respingere după ce fusese aprobat → restituie zilele
     if new_status == VacationRequestStatusEnum.rejected and old_status == VacationRequestStatusEnum.approved:
         if req.request_type == RequestTypeEnum.vacation:
             balance = _get_or_create_balance(db, req.nurse_id, req.start_date.year)
-            days = _count_days(req.start_date, req.end_date)
-            balance.used_days = max(0, balance.used_days - days)
+            balance.used_days = max(0, balance.used_days - _count_days(req.start_date, req.end_date))
 
     req.status = new_status
     req.reviewed_by = current_user.id
@@ -251,28 +223,20 @@ def review_request(
     )
 
 
-# ---------------------------------------------------------------------------
-# Generare grafic AI
-# ---------------------------------------------------------------------------
 @router.post("/generate")
 def generate_schedule(
     req: ScheduleGenerateRequest,
     current_user: User = Depends(require_role("manager")),
     db: Session = Depends(get_db),
 ):
-    """Generează graficul lunar optim cu AI (bazat pe predicții ML)."""
     from ..services.schedule_generator import generate_monthly_schedule
 
     if not (1 <= req.month <= 12):
         raise HTTPException(status_code=422, detail="Luna trebuie să fie între 1 și 12.")
 
-    result = generate_monthly_schedule(db, req.department_id, req.year, req.month)
-    return result
+    return generate_monthly_schedule(db, req.department_id, req.year, req.month)
 
 
-# ---------------------------------------------------------------------------
-# Grafic salvat
-# ---------------------------------------------------------------------------
 @router.get("/monthly", response_model=MonthlyScheduleOut)
 def get_monthly_schedule(
     department_id: int = Query(...),
@@ -281,7 +245,6 @@ def get_monthly_schedule(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Returnează graficul salvat pentru o lună și departament."""
     sched = (
         db.query(MonthlySchedule)
         .filter(
@@ -303,8 +266,6 @@ def save_schedule(
     current_user: User = Depends(require_role("manager")),
     db: Session = Depends(get_db),
 ):
-    """Salvează (sau suprascrie) graficul lunar."""
-    # Verifică JSON valid
     try:
         json.loads(req.schedule_data)
     except ValueError:

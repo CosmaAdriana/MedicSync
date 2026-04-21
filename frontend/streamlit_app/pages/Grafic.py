@@ -146,7 +146,7 @@ def _export_csv(df: pd.DataFrame, year: int, month: int) -> bytes:
 # ============================================================================
 def _nurse_schedule_view(api):
     """Afișează graficul lunar personal al asistentei."""
-    st.markdown("### 📆 Graficul meu lunar")
+    st.markdown("### Graficul meu lunar")
 
     user = st.session_state.get("user", {})
     dept_id = user.get("department_id")
@@ -258,7 +258,7 @@ def _nurse_schedule_view(api):
 
 
 def nurse_view(api):
-    st.markdown("## 📅 Grafic Lunar — Cereri")
+    st.markdown("## Grafic Lunar — Cereri")
 
     # ── Sold concediu ────────────────────────────────────────────────────────
     try:
@@ -365,7 +365,7 @@ def nurse_view(api):
 # VIEW MANAGER
 # ============================================================================
 def manager_view(api):
-    st.markdown("## 📅 Grafic Lunar — Manager")
+    st.markdown("## Grafic Lunar — Manager")
 
     # ── Selectare lună și departament ────────────────────────────────────────
     today = date.today()
@@ -408,7 +408,7 @@ def manager_view(api):
     # ── Generare / Incarcare grafic ──────────────────────────────────────────
     col_gen, col_load = st.columns(2)
 
-    if col_gen.button("🤖 Generează grafic cu AI", type="primary", use_container_width=True):
+    if col_gen.button("Generează grafic", type="primary", use_container_width=True):
         with st.spinner("Generez graficul optim cu AI..."):
             try:
                 result = api.generate_schedule(dept_id, int(year), month)
@@ -425,7 +425,7 @@ def manager_view(api):
                         msg = str(e)
                     st.error(f"❌ {msg}")
 
-    if col_load.button("📂 Încarcă grafic salvat", use_container_width=True):
+    if col_load.button("Încarcă grafic salvat", use_container_width=True):
         try:
             saved = api.get_monthly_schedule(dept_id, int(year), month)
             loaded = json.loads(saved["schedule_data"])
@@ -480,7 +480,7 @@ def manager_view(api):
             for d in range(1, num_days + 1)
         }
 
-        with st.expander("✏️ Editează graficul", expanded=False):
+        with st.expander("Editează graficul", expanded=False):
             st.caption("Dublu-click pe o celulă pentru a schimba tura. Salvează după modificări.")
             edited_df = st.data_editor(
                 df.copy(),
@@ -492,7 +492,7 @@ def manager_view(api):
 
             col_save, col_final = st.columns(2)
 
-            if col_save.button("💾 Salvează", use_container_width=True):
+            if col_save.button("Salvează", use_container_width=True):
                 updated = _df_to_schedule_data(edited_df, sched, int(year), month)
                 try:
                     api.save_schedule(
@@ -509,7 +509,7 @@ def manager_view(api):
                     if not handle_api_exception(e):
                         st.error(f"❌ {e}")
 
-            if col_final.button("✅ Finalizează & Salvează", use_container_width=True, type="primary"):
+            if col_final.button("Finalizează & Salvează", use_container_width=True, type="primary"):
                 updated = _df_to_schedule_data(edited_df, sched, int(year), month)
                 try:
                     api.save_schedule(
@@ -529,7 +529,7 @@ def manager_view(api):
         # ── Export CSV ───────────────────────────────────────────────────────
         csv_bytes = _export_csv(df, int(year), month)
         st.download_button(
-            label="📥 Export CSV",
+            label="Export CSV",
             data=csv_bytes,
             file_name=f"grafic_{dept_name}_{MONTHS_RO[month]}_{int(year)}.csv",
             mime="text/csv",
@@ -547,7 +547,7 @@ def manager_view(api):
             st.info("Graficul nu este publicat încă. Asistentele nu îl pot vedea.")
 
         if st.button(
-            "🚀 Publică graficul" if not is_finalized else "🔄 Re-publică graficul",
+            "Publică graficul" if not is_finalized else "Re-publică graficul",
             type="primary",
             use_container_width=True,
             key="btn_publish",

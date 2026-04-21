@@ -1,12 +1,12 @@
 """
-MedicSync — Predictions Router (Health 4.0)
+MedicSync — Predictions Router
+GET /predict/model-info   — real metrics and feature importances from ML bundle
 GET /predict/staff-needs  — ML-powered staff requirement prediction
-GET /predict/inventory    — Safety stock calculation 
+GET /predict/inventory    — safety stock calculation (SS = Z · σ_L · √D_avg)
 """
 
 import math
 from datetime import date
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
@@ -20,14 +20,10 @@ from ..services.staff_predictor import predict_staff_needs, _load_model
 router = APIRouter(prefix="/predict", tags=["Predictions (AI/ML)"])
 
 
-# ---------------------------------------------------------------------------
-# GET /predict/model-info
-# ---------------------------------------------------------------------------
 @router.get("/model-info")
 def get_model_info(
     current_user: User = Depends(require_role("manager")),
 ):
-    """Return real metrics and feature importances from the trained ML model bundle."""
     try:
         bundle = _load_model()
     except FileNotFoundError as e:
@@ -45,109 +41,52 @@ def get_model_info(
         "n_estimators": model.n_estimators,
         "max_depth": model.max_depth,
         "patients_per_nurse": bundle["patients_per_nurse"],
-        "feature_importances": dict(
-            sorted(importances.items(), key=lambda x: -x[1])
-        ),
+        "feature_importances": dict(sorted(importances.items(), key=lambda x: -x[1])),
     }
 
 
-# ---------------------------------------------------------------------------
-# GET /predict/staff-needs
-# ---------------------------------------------------------------------------
 @router.get("/staff-needs", response_model=StaffPredictionOut)
 def get_staff_prediction(
-    target_date: date = Query(..., alias="date", description="Data pentru predicție (YYYY-MM-DD)"),
-    weather_temp: float = Query(..., description="Temperatura estimată (°C)"),
-    department_id: int = Query(..., description="ID-ul departamentului"),
-    is_holiday: bool = Query(False, description="Este zi de sărbătoare?"),
-    is_epidemic: bool = Query(False, description="Este perioadă de epidemie?"),
+    target_date: date = Query(..., alias="date"),
+    weather_temp: float = Query(...),
+    department_id: int = Query(...),
+    is_holiday: bool = Query(False),
+    is_epidemic: bool = Query(False),
     current_user: User = Depends(require_role("manager")),
     db: Session = Depends(get_db),
 ):
-    """
-    Predict the number of patients and recommended nursing staff for a given day and department.
-
-    Uses a RandomForest model trained on 3 years of historical admission data,
-    taking into account seasonality, weather, holidays, epidemic periods, and department type.
-
-    🔒 Requires: **manager** role.
-    """
-    # Validate department exists and get name
     department = db.query(Department).filter(Department.id == department_id).first()
     if not department:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Departamentul cu ID {department_id} nu există.",
-        )
-
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail=f"Departamentul cu ID {department_id} nu există.")
     try:
-        result = predict_staff_needs(
-            target_date,
-            weather_temp,
-            is_holiday,
-            is_epidemic,
-            department_id,
-            department.name,
-        )
-        return result
+        return predict_staff_needs(target_date, weather_temp, is_holiday, is_epidemic,
+                                   department_id, department.name)
     except FileNotFoundError as e:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=str(e),
-        )
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e))
 
 
-# ---------------------------------------------------------------------------
-# GET /predict/inventory — Safety Stock (SS = Z * σ_L * √D_avg)
-# ---------------------------------------------------------------------------
-# Z = 1.65  (95% service level)
-# σ_L = lead time std dev in days (configurable, default 2)
-# D_avg = average daily consumption (estimated from min_stock_level as proxy)
 Z_SCORE = 1.65
-DEFAULT_LEAD_TIME_STD = 2.0  # days
+DEFAULT_LEAD_TIME_STD = 2.0
 
 
 @router.get("/inventory", response_model=list[InventoryPredictionItemOut])
 def get_inventory_prediction(
-    lead_time_std: float = Query(DEFAULT_LEAD_TIME_STD, description="Deviația standard a timpului de livrare (zile)"),
+    lead_time_std: float = Query(DEFAULT_LEAD_TIME_STD),
     current_user: User = Depends(require_role("inventory_manager")),
     db: Session = Depends(get_db),
 ):
-    """
-    Calculate the safety stock for each inventory item using the formula:
-
-        **SS = Z · σ_L · √D_avg**
-
-    Where:
-    - Z = 1.65 (95% service level)
-    - σ_L = standard deviation of lead time (configurable)
-    - D_avg = estimated average daily consumption
-
-    Also indicates whether a reorder is needed (current_stock < safety_stock + min_stock_level).
-
-    🔒 Requires: **inventory_manager** role.
-    """
     items = db.query(InventoryItem).order_by(InventoryItem.product_name).all()
     results = []
-
     for item in items:
-        # Estimate avg daily consumption from min_stock_level
-        # (min_stock_level represents roughly a week's worth of supply)
         avg_daily = item.min_stock_level / 7.0 if item.min_stock_level > 0 else 1.0
-
         safety_stock = math.ceil(Z_SCORE * lead_time_std * math.sqrt(avg_daily))
-
-        reorder_needed = item.current_stock < (safety_stock + item.min_stock_level)
-
-        results.append(
-            InventoryPredictionItemOut(
-                product_name=item.product_name,
-                current_stock=item.current_stock,
-                min_stock_level=item.min_stock_level,
-                avg_daily_consumption=round(avg_daily, 2),
-                safety_stock=safety_stock,
-                reorder_needed=reorder_needed,
-            )
-        )
-
+        results.append(InventoryPredictionItemOut(
+            product_name=item.product_name,
+            current_stock=item.current_stock,
+            min_stock_level=item.min_stock_level,
+            avg_daily_consumption=round(avg_daily, 2),
+            safety_stock=safety_stock,
+            reorder_needed=item.current_stock < (safety_stock + item.min_stock_level),
+        ))
     return results

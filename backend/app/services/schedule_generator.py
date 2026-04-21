@@ -1,11 +1,12 @@
 """
-MedicSync — Schedule Generator Service 
+MedicSync — Schedule Generator Service
+Generates an optimized monthly shift schedule respecting medical labor constraints.
 
-Coduri tura:
-  D = Dimineata  07:00-15:00
-  A = Amiaza     15:00-23:00
+Shift codes:
+  D = Dimineața  07:00-15:00
+  A = Amiază     15:00-23:00
   N = Noapte     23:00-07:00
-  L = Zi libera
+  L = Zi liberă
   C = Concediu aprobat
 """
 
@@ -26,57 +27,27 @@ SHIFT_C = "C"
 WORKING_SHIFTS = {SHIFT_D, SHIFT_A, SHIFT_N}
 DEFAULT_TEMP = 18.0
 
-
+# Per-department constraints; fallback to DEFAULT_PROFILE for unknown departments
 DEPT_PROFILES: dict[int, dict] = {
-    2: { 
-        "shifts_needed":         {"D": 3, "A": 3, "N": 2},
-        "max_consecutive":        4,
-        "max_nights_per_month":   8,
-        "min_rest_after_night":   2,
-        "max_consecutive_nights": 2,
-    },
-    3: { 
-        "shifts_needed":         {"D": 2, "A": 2, "N": 2},
-        "max_consecutive":        5,
-        "max_nights_per_month":  10,
-        "min_rest_after_night":   2,
-        "max_consecutive_nights": 3,
-    },
-    4: {
-        "shifts_needed":         {"D": 2, "A": 2, "N": 2},
-        "max_consecutive":        5,
-        "max_nights_per_month":  10,
-        "min_rest_after_night":   2,
-        "max_consecutive_nights": 3,
-    },
-    5: {
-        "shifts_needed":         {"D": 3, "A": 2, "N": 2},
-        "max_consecutive":        4,
-        "max_nights_per_month":   9,
-        "min_rest_after_night":   2,
-        "max_consecutive_nights": 2,
-    },
-    6: {
-        "shifts_needed":         {"D": 3, "A": 3, "N": 2},
-        "max_consecutive":        4,
-        "max_nights_per_month":   8,
-        "min_rest_after_night":   2,
-        "max_consecutive_nights": 2,
-    },
-    7: {
-        "shifts_needed":         {"D": 2, "A": 2, "N": 2},
-        "max_consecutive":        5,
-        "max_nights_per_month":  10,
-        "min_rest_after_night":   2,
-        "max_consecutive_nights": 3,
-    },
+    2: {"shifts_needed": {"D": 3, "A": 3, "N": 2}, "max_consecutive": 4,
+        "max_nights_per_month": 8,  "min_rest_after_night": 2, "max_consecutive_nights": 2},
+    3: {"shifts_needed": {"D": 2, "A": 2, "N": 2}, "max_consecutive": 5,
+        "max_nights_per_month": 10, "min_rest_after_night": 2, "max_consecutive_nights": 3},
+    4: {"shifts_needed": {"D": 2, "A": 2, "N": 2}, "max_consecutive": 5,
+        "max_nights_per_month": 10, "min_rest_after_night": 2, "max_consecutive_nights": 3},
+    5: {"shifts_needed": {"D": 3, "A": 2, "N": 2}, "max_consecutive": 4,
+        "max_nights_per_month": 9,  "min_rest_after_night": 2, "max_consecutive_nights": 2},
+    6: {"shifts_needed": {"D": 3, "A": 3, "N": 2}, "max_consecutive": 4,
+        "max_nights_per_month": 8,  "min_rest_after_night": 2, "max_consecutive_nights": 2},
+    7: {"shifts_needed": {"D": 2, "A": 2, "N": 2}, "max_consecutive": 5,
+        "max_nights_per_month": 10, "min_rest_after_night": 2, "max_consecutive_nights": 3},
 }
 
 DEFAULT_PROFILE: dict = {
-    "shifts_needed":         {"D": 2, "A": 2, "N": 2},
-    "max_consecutive":        5,
-    "max_nights_per_month":  10,
-    "min_rest_after_night":   2,
+    "shifts_needed": {"D": 2, "A": 2, "N": 2},
+    "max_consecutive": 5,
+    "max_nights_per_month": 10,
+    "min_rest_after_night": 2,
     "max_consecutive_nights": 3,
 }
 
@@ -88,7 +59,6 @@ def _get_profile(department_id: int) -> dict:
 def _compute_shift_targets(num_nurses: int, profile: dict) -> dict[str, int]:
     ideal = profile["shifts_needed"]
     ideal_total = sum(ideal.values())
-    # 67% din echipa lucreaza simultan → ~20 ture/luna
     target_working = max(6, round(num_nurses * 0.67))
     min_per_shift = 2 if num_nurses >= 6 else 1
 
@@ -110,15 +80,16 @@ def _compute_shift_targets(num_nurses: int, profile: dict) -> dict[str, int]:
 
     return result
 
+
 def _can_work(
-    nurse_id:           int,
-    shift_type:         str,
-    schedule:           dict[str, dict[str, str]],
-    year:               int,
-    month:              int,
-    day_num:            int,
-    profile:            dict,
-    night_counts:       dict[int, int],
+    nurse_id: int,
+    shift_type: str,
+    schedule: dict[str, dict[str, str]],
+    year: int,
+    month: int,
+    day_num: int,
+    profile: dict,
+    night_counts: dict[int, int],
     consecutive_nights: dict[int, int],
 ) -> bool:
     nid_str    = str(nurse_id)
@@ -130,8 +101,7 @@ def _can_work(
     def gs(d: int) -> str:
         if d < 1 or d >= day_num:
             return SHIFT_L
-        ds = date(year, month, d).isoformat()
-        return schedule.get(nid_str, {}).get(ds, SHIFT_L)
+        return schedule.get(nid_str, {}).get(date(year, month, d).isoformat(), SHIFT_L)
 
     consec = 0
     for back in range(1, max_cons + 1):
@@ -150,7 +120,7 @@ def _can_work(
             return False
         if night_counts.get(nurse_id, 0) >= max_nights:
             return False
-        
+
     if shift_type in WORKING_SHIFTS:
         for back in range(1, min_rest + 1):
             end_day = day_num - back
@@ -159,16 +129,12 @@ def _can_work(
             if gs(end_day) != SHIFT_N:
                 continue
             if end_day + 1 >= day_num:
-                # Ziua urmatoare e azi (nealocat inca).
-                # Daca vrem N → extindem blocul, R2 nu se aplica.
                 if shift_type == SHIFT_N:
                     continue
-                return False  # D sau A in perioada de repaus post-bloc
+                return False
             else:
                 if gs(end_day + 1) != SHIFT_N:
-                    # Blocul s-a terminat la end_day, suntem in fereastra de repaus.
                     return False
-                # Altfel blocul a continuat, end_day nu era ultimul N.
 
     return True
 
@@ -189,12 +155,11 @@ def _predict_nurses_for_day(target_date: date, department_id: int) -> int:
 
 
 def generate_monthly_schedule(
-    db:            Session,
+    db: Session,
     department_id: int,
-    year:          int,
-    month:         int,
+    year: int,
+    month: int,
 ) -> dict[str, Any]:
-
     nurses = (
         db.query(User)
         .filter(User.department_id == department_id, User.role == RoleEnum.nurse)
@@ -222,6 +187,7 @@ def generate_monthly_schedule(
         )
         .all()
     )
+
     override: dict[int, dict[date, str]] = {nid: {} for nid in nurse_ids}
     for req in approved:
         code = SHIFT_C if req.request_type == RequestTypeEnum.vacation else SHIFT_L
@@ -237,14 +203,12 @@ def generate_monthly_schedule(
     type_counts:        dict[int, dict[str, int]] = {
         nid: {SHIFT_D: 0, SHIFT_A: 0, SHIFT_N: 0} for nid in nurse_ids
     }
-
     schedule: dict[str, dict[str, str]] = {str(n.id): {} for n in nurses}
 
     for day_num in range(1, num_days + 1):
         current_date = date(year, month, day_num)
         date_str     = current_date.isoformat()
 
-        # Marcheaza concedii/libere aprobate
         on_leave: set[int] = set()
         for nid in nurse_ids:
             if current_date in override[nid]:
@@ -254,18 +218,12 @@ def generate_monthly_schedule(
         available = [nid for nid in nurse_ids if nid not in on_leave]
         assigned:  set[int] = set()
 
-        for shift_type, target in [
-            (SHIFT_N, targets["N"]),
-            (SHIFT_D, targets["D"]),
-            (SHIFT_A, targets["A"]),
-        ]:
+        for shift_type, target in [(SHIFT_N, targets["N"]), (SHIFT_D, targets["D"]), (SHIFT_A, targets["A"])]:
             eligible = [
                 nid for nid in available
                 if nid not in assigned
-                and _can_work(
-                    nid, shift_type, schedule, year, month, day_num,
-                    profile, night_counts, consecutive_nights,
-                )
+                and _can_work(nid, shift_type, schedule, year, month, day_num,
+                              profile, night_counts, consecutive_nights)
             ]
             if shift_type == SHIFT_N:
                 eligible.sort(key=lambda nid: (night_counts[nid], total_work[nid]))
@@ -288,7 +246,6 @@ def generate_monthly_schedule(
                 schedule[str(nid)][date_str] = SHIFT_L
             if schedule[str(nid)].get(date_str) != SHIFT_N:
                 consecutive_nights[nid] = 0
-
 
     violations = _final_validation(schedule, nurse_ids, year, month, num_days, profile)
 
@@ -322,14 +279,13 @@ def _final_validation(
     num_days:  int,
     profile:   dict,
 ) -> list[str]:
-    
     violations = []
     max_cons   = profile["max_consecutive"]
 
     for nid in nurse_ids:
         nid_str = str(nid)
-        dates  = [date(year, month, d).isoformat() for d in range(1, num_days + 1)]
-        shifts = [schedule[nid_str].get(d, SHIFT_L) for d in dates]
+        dates   = [date(year, month, d).isoformat() for d in range(1, num_days + 1)]
+        shifts  = [schedule[nid_str].get(d, SHIFT_L) for d in dates]
 
         for i in range(len(shifts) - 1):
             if shifts[i] == SHIFT_N and shifts[i + 1] in {SHIFT_D, SHIFT_A}:
@@ -342,9 +298,7 @@ def _final_validation(
             if s in WORKING_SHIFTS:
                 consec += 1
                 if consec > max_cons:
-                    violations.append(
-                        f"[R3] Asistenta {nid}, ziua {i + 1}: {consec} ture consecutive"
-                    )
+                    violations.append(f"[R3] Asistenta {nid}, ziua {i + 1}: {consec} ture consecutive")
             else:
                 consec = 0
 

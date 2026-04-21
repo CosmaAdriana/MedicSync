@@ -1,10 +1,8 @@
 """
 MedicSync — Vitals Router
-POST /vitals — record vital signs at the patient's bedside.
-Only nurses (role = "nurse") are allowed to record vital signs.
-
-After recording, vitals are automatically analyzed
-for clinical risk. If a threshold is breached, a ClinicalAlert is generated.
+POST /vitals — record vital signs and auto-analyze for clinical risk.
+If a threshold is breached, a ClinicalAlert is generated and patient
+status is set to critical automatically.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -19,29 +17,16 @@ from ..services.clinical_analyzer import analyze_vitals
 router = APIRouter(prefix="/vitals", tags=["Vital Signs"])
 
 
-# ---------------------------------------------------------------------------
-# Endpoints
-# ---------------------------------------------------------------------------
 @router.post("/", response_model=VitalSignOutWithAlert, status_code=201)
 def record_vitals(
     vitals_in: VitalSignCreate,
     current_user: User = Depends(require_role("nurse")),
     db: Session = Depends(get_db),
 ):
-    """
-    Record a new set of vital signs for an admitted patient.
-    **Automatically analyzes** the values and generates a ClinicalAlert
-    if any clinical threshold is breached.
-
-    🔒 Requires: **nurse** role (JWT Bearer token).
-    """
-    # Verify patient exists
     patient = db.query(Patient).filter(Patient.id == vitals_in.patient_id).first()
     if not patient:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Pacientul cu ID {vitals_in.patient_id} nu a fost găsit.",
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail=f"Pacientul cu ID {vitals_in.patient_id} nu a fost găsit.")
 
     vital_sign = VitalSign(
         patient_id=vitals_in.patient_id,
@@ -61,7 +46,6 @@ def record_vitals(
         db.commit()
         db.refresh(patient)
 
-    # Build response with optional alert
     response = {
         "id": vital_sign.id,
         "patient_id": vital_sign.patient_id,

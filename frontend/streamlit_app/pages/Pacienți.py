@@ -18,8 +18,7 @@ st.set_page_config(page_title="Pacienți", page_icon="👤", layout="wide", init
 require_auth(allowed_roles=["doctor", "nurse", "manager"])
 render_top_nav()
 
-st.title("👤 Management Pacienți")
-st.markdown("### Evidență și monitorizare pacienți internați")
+st.title("Pacienți")
 
 api = st.session_state.api_client
 user_role = get_user_role()
@@ -28,9 +27,9 @@ user_role = get_user_role()
 # Top-level Tabs
 # ============================================================================
 tab_lista, tab_interneaza, tab_externeaza = st.tabs([
-    "📋 Listă Pacienți",
-    "➕ Internează Pacient",
-    "📤 Externează Pacient"
+    "Listă pacienți",
+    "Internează",
+    "Externează / Status",
 ])
 
 # ============================================================================
@@ -66,7 +65,7 @@ with tab_lista:
     with col2:
         st.markdown("")
         st.markdown("")
-        if st.button("🔄 Refresh", use_container_width=True):
+        if st.button("Refresh", use_container_width=True):
             cache.get_patients.clear()
             st.rerun()
 
@@ -123,7 +122,7 @@ with tab_lista:
 # TAB 2 — Internează Pacient
 # ============================================================================
 with tab_interneaza:
-    st.subheader("➕ Internează Pacient Nou")
+    st.subheader("Internează pacient nou")
 
     with st.form("new_patient", clear_on_submit=True):
         col1, col2 = st.columns(2)
@@ -165,7 +164,7 @@ with tab_interneaza:
         col_btn, _ = st.columns([1, 3])
         with col_btn:
             submit = st.form_submit_button(
-                "💾 Internează Pacient",
+                "Internează",
                 use_container_width=True,
                 type="primary"
             )
@@ -217,8 +216,8 @@ with tab_externeaza:
             </div>
         """, unsafe_allow_html=True)
     else:
-        st.subheader("📤 Externează / Actualizează Status Pacient")
-        st.info("ℹ️ Această acțiune schimbă statusul pacientului. Externarea este ireversibilă fără intervenția unui manager.")
+        st.subheader("Actualizează status pacient")
+        st.info("Externarea este ireversibilă fără intervenția unui manager.")
 
         try:
             admitted  = cache.get_patients(api.token, status="admitted")
@@ -277,7 +276,7 @@ with tab_externeaza:
                 col_btn, _ = st.columns([1, 3])
                 with col_btn:
                     confirm = st.button(
-                        "✅ Confirmă Modificarea" if new_status != "discharged" else "📤 Externează Pacient",
+                        "Confirmă" if new_status != "discharged" else "Externează pacient",
                         type="primary",
                         use_container_width=True
                     )

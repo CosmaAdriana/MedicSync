@@ -3,8 +3,6 @@ MedicSync — Orders Router
 GET  /orders              — list all supply orders.
 POST /orders              — create a new supply order.
 PUT  /orders/{id}/status  — change order status (draft → placed → processed → delivered).
-
-🔒 All endpoints require: inventory_manager role.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -18,19 +16,11 @@ from ..schemas import OrderCreate, OrderOut
 router = APIRouter(prefix="/orders", tags=["Orders"])
 
 
-# ---------------------------------------------------------------------------
-# Endpoints
-# ---------------------------------------------------------------------------
 @router.get("/", response_model=list[OrderOut])
 def list_orders(
     current_user: User = Depends(require_role("inventory_manager", "manager")),
     db: Session = Depends(get_db),
 ):
-    """
-    Return all supply orders (newest first).
-
-    🔒 Requires: **inventory_manager** or **manager** role.
-    """
     return db.query(Order).order_by(Order.created_at.desc()).all()
 
 
@@ -40,15 +30,6 @@ def create_order(
     current_user: User = Depends(require_role("inventory_manager", "manager")),
     db: Session = Depends(get_db),
 ):
-    """
-    Create a new supply order with its items.
-
-    The order starts in 'draft' status. The total_amount is calculated
-    automatically from (quantity × unit_price) for each item.
-
-    🔒 Requires: **inventory_manager** role.
-    """
-    # Calculate total
     total = sum(item.quantity * item.unit_price for item in order_in.items)
 
     order = Order(
@@ -57,10 +38,9 @@ def create_order(
         total_amount=total,
     )
     db.add(order)
-    db.flush()  # get order.id for the items
+    db.flush()
 
     for item_in in order_in.items:
-        # Verify inventory item exists
         inv_item = db.query(InventoryItem).filter(InventoryItem.id == item_in.inventory_item_id).first()
         if not inv_item:
             db.rollback()
@@ -68,25 +48,24 @@ def create_order(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Produsul cu ID {item_in.inventory_item_id} nu a fost găsit.",
             )
-        order_item = OrderItem(
+        db.add(OrderItem(
             order_id=order.id,
             inventory_item_id=item_in.inventory_item_id,
             quantity=item_in.quantity,
             unit_price=item_in.unit_price,
-        )
-        db.add(order_item)
+        ))
 
     db.commit()
     db.refresh(order)
     return order
 
 
-# Valid state transitions (UML State Machine)
+# draft → placed → processed → delivered (or placed → rejected)
 _VALID_TRANSITIONS = {
-    OrderStatusEnum.draft: [OrderStatusEnum.placed],
-    OrderStatusEnum.placed: [OrderStatusEnum.processed, OrderStatusEnum.rejected],
+    OrderStatusEnum.draft:     [OrderStatusEnum.placed],
+    OrderStatusEnum.placed:    [OrderStatusEnum.processed, OrderStatusEnum.rejected],
     OrderStatusEnum.processed: [OrderStatusEnum.delivered],
-    OrderStatusEnum.rejected: [],
+    OrderStatusEnum.rejected:  [],
     OrderStatusEnum.delivered: [],
 }
 
@@ -98,20 +77,11 @@ def update_order_status(
     current_user: User = Depends(require_role("inventory_manager", "manager")),
     db: Session = Depends(get_db),
 ):
-    """
-    Transition an order to a new status following the UML State Machine:
-    draft → placed → processed → delivered  (or placed → rejected).
-
-    🔒 Requires: **inventory_manager** role.
-    """
     order = db.query(Order).filter(Order.id == order_id).first()
     if not order:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Comanda cu ID {order_id} nu a fost găsită.",
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail=f"Comanda cu ID {order_id} nu a fost găsită.")
 
-    # Validate status value
     try:
         target_status = OrderStatusEnum(new_status)
     except ValueError:
@@ -120,7 +90,6 @@ def update_order_status(
             detail=f"Status invalid: '{new_status}'. Valori acceptate: {[s.value for s in OrderStatusEnum]}",
         )
 
-    # Validate transition
     allowed = _VALID_TRANSITIONS.get(order.status, [])
     if target_status not in allowed:
         raise HTTPException(
@@ -131,7 +100,6 @@ def update_order_status(
 
     order.status = target_status
 
-    # La livrare, adaugă cantitățile din comandă înapoi în stocul de inventar
     if target_status == OrderStatusEnum.delivered:
         for order_item in order.items:
             inv_item = db.query(InventoryItem).filter(

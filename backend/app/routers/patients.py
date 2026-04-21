@@ -1,12 +1,10 @@
 """
 MedicSync — Patients Router
-GET  /patients              — list patients (optional ?status= filter).
-POST /patients              — register a new patient.
-GET  /patients/{id}         — patient details.
-GET  /patients/{id}/vitals  — vital signs history for a patient.
-GET  /patients/{id}/alerts  — clinical alerts for a patient.
-
-🔒 Detail/vitals/alerts endpoints require: doctor, nurse, or manager role.
+GET  /patients              — list patients (optional ?status= filter)
+POST /patients              — register a new patient
+GET  /patients/{id}         — patient details
+GET  /patients/{id}/vitals  — vital signs history
+GET  /patients/{id}/alerts  — clinical alerts
 """
 
 from datetime import date
@@ -24,18 +22,11 @@ from ..schemas import ClinicalAlertOut, PatientCreate, PatientOut, PatientStatus
 router = APIRouter(prefix="/patients", tags=["Patients"])
 
 
-# ---------------------------------------------------------------------------
-# Endpoints
-# ---------------------------------------------------------------------------
 @router.get("/hospital-stats")
 def hospital_stats(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """
-    Returns patient counts per department for the entire hospital.
-    No department filtering — visible to all roles.
-    """
     from ..models import Department
     rows = (
         db.query(
@@ -65,31 +56,20 @@ def hospital_stats(
 
 @router.get("/", response_model=list[PatientOut])
 def list_patients(
-    status: Optional[str] = Query(None, description="Filter by status: admitted | discharged | critical"),
+    status: Optional[str] = Query(None),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """
-    Return patients. Nurses and doctors see only their department's patients.
-    Managers see all patients.
-    """
     query = db.query(Patient)
-
     if status:
         query = query.filter(Patient.status == status)
-
-    # Restrict nurse/doctor to their own department
     if current_user.role.value in ("nurse", "doctor") and current_user.department_id:
         query = query.filter(Patient.department_id == current_user.department_id)
-
     return query.order_by(Patient.admission_date.desc()).all()
 
 
 @router.post("/", response_model=PatientOut, status_code=201)
 def create_patient(patient_in: PatientCreate, db: Session = Depends(get_db)):
-    """
-    Register a new patient in the system.
-    """
     patient = Patient(
         full_name=patient_in.full_name,
         admission_date=patient_in.admission_date or date.today(),
@@ -108,17 +88,10 @@ def get_patient(
     current_user: User = Depends(require_role("doctor", "nurse", "manager")),
     db: Session = Depends(get_db),
 ):
-    """
-    Return details for a single patient.
-
-    🔒 Requires: **doctor**, **nurse**, or **manager** role.
-    """
     patient = db.query(Patient).filter(Patient.id == patient_id).first()
     if not patient:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Pacientul cu ID {patient_id} nu a fost găsit.",
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail=f"Pacientul cu ID {patient_id} nu a fost găsit.")
     return patient
 
 
@@ -129,23 +102,14 @@ def update_patient_status(
     current_user: User = Depends(require_role("doctor", "manager")),
     db: Session = Depends(get_db),
 ):
-    """
-    Update a patient's status (e.g. discharge).
-
-    🔒 Requires: **doctor** or **manager** role.
-    """
     allowed = {"admitted", "discharged", "critical"}
     if body.status not in allowed:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Status invalid. Valori acceptate: {', '.join(allowed)}",
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail=f"Status invalid. Valori acceptate: {', '.join(allowed)}")
     patient = db.query(Patient).filter(Patient.id == patient_id).first()
     if not patient:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Pacientul cu ID {patient_id} nu a fost găsit.",
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail=f"Pacientul cu ID {patient_id} nu a fost găsit.")
     patient.status = body.status
     db.commit()
     db.refresh(patient)
@@ -158,17 +122,9 @@ def get_patient_vitals(
     current_user: User = Depends(require_role("doctor", "nurse", "manager")),
     db: Session = Depends(get_db),
 ):
-    """
-    Return the vital signs history for a patient (newest first).
-
-    🔒 Requires: **doctor**, **nurse**, or **manager** role.
-    """
-    exists = db.query(Patient.id).filter(Patient.id == patient_id).scalar()
-    if not exists:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Pacientul cu ID {patient_id} nu a fost găsit.",
-        )
+    if not db.query(Patient.id).filter(Patient.id == patient_id).scalar():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail=f"Pacientul cu ID {patient_id} nu a fost găsit.")
     return (
         db.query(VitalSign)
         .filter(VitalSign.patient_id == patient_id)
@@ -183,17 +139,9 @@ def get_patient_alerts(
     current_user: User = Depends(require_role("doctor", "nurse", "manager")),
     db: Session = Depends(get_db),
 ):
-    """
-    Return clinical alerts for a patient (newest first).
-
-    🔒 Requires: **doctor**, **nurse**, or **manager** role.
-    """
-    exists = db.query(Patient.id).filter(Patient.id == patient_id).scalar()
-    if not exists:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Pacientul cu ID {patient_id} nu a fost găsit.",
-        )
+    if not db.query(Patient.id).filter(Patient.id == patient_id).scalar():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail=f"Pacientul cu ID {patient_id} nu a fost găsit.")
     return (
         db.query(ClinicalAlert)
         .filter(ClinicalAlert.patient_id == patient_id)
@@ -209,21 +157,15 @@ def resolve_alert(
     current_user: User = Depends(require_role("doctor", "nurse", "manager")),
     db: Session = Depends(get_db),
 ):
-    """
-    Mark a clinical alert as resolved.
-
-    🔒 Requires: **doctor**, **nurse**, or **manager** role.
-    """
     alert = (
         db.query(ClinicalAlert)
         .filter(ClinicalAlert.id == alert_id, ClinicalAlert.patient_id == patient_id)
         .first()
     )
     if not alert:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Alerta cu ID {alert_id} nu a fost găsită.",
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail=f"Alerta cu ID {alert_id} nu a fost găsită.")
+
     alert.is_resolved = True
     db.commit()
 

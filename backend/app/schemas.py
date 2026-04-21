@@ -168,6 +168,33 @@ class InventoryItemOut(BaseModel):
     department_id: Optional[int] = None
 
 
+# ========================== Stock Predictions ==============================
+
+class StockUsageLogOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    inventory_item_id: int
+    quantity_used: int
+    used_at: datetime
+
+
+class ProductConsumptionStats(BaseModel):
+    inventory_item_id: int
+    product_name: str
+    department_id: Optional[int]
+    department_name: Optional[str]
+    total_used_30d: int
+    total_used_7d: int
+    avg_daily_7d: float
+    avg_daily_30d: float
+    current_stock: int
+    min_stock_level: int
+    days_until_stockout: Optional[float]
+    recommended_order_qty: int
+    unit_price: float
+
+
 # ========================== Shift =========================================
 
 class ShiftCreate(BaseModel):

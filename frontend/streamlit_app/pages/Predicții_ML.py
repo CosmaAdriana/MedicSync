@@ -21,7 +21,7 @@ st.set_page_config(page_title="Predicții ML", page_icon="🤖", layout="wide", 
 require_auth(allowed_roles=["manager"])
 render_top_nav()
 
-st.title("🤖 Predicții ML — Health 4.0")
+st.title("Predicții ML")
 
 api = st.session_state.api_client
 
@@ -53,13 +53,13 @@ try:
     )
 
     st.info(f"""
-🧠 **Model: RandomForest Regressor** &nbsp;·&nbsp; {model_info['n_estimators']} arbori &nbsp;·&nbsp; adâncime max {model_info['max_depth']}
+**Model: RandomForest Regressor** &nbsp;·&nbsp; {model_info['n_estimators']} arbori &nbsp;·&nbsp; adâncime max {model_info['max_depth']}
 
-📊 **Metrici reale din model:**
+**Metrici reale:**
 - **Acuratețe (R²):** {r2_pct:.2f}%
 - **Eroare medie (MAE):** {mae_val} pacienți
 
-🔍 **Feature importance:**
+**Feature importance:**
 {fi_lines}
     """)
 except Exception as e:
@@ -83,18 +83,18 @@ except Exception as e:
 # ============================================================================
 # Tabs
 # ============================================================================
-tab_zi, tab_trend = st.tabs(["📅 Predicție Zi", "📈 Trend 7 / 30 zile"])
+tab_zi, tab_trend = st.tabs(["Predicție Zi", "Trend"])
 
 # ─────────────────────────────────────────────────────────────────────────────
 # TAB 1 — Predicție pentru o singură zi, mai multe departamente
 # ─────────────────────────────────────────────────────────────────────────────
 with tab_zi:
-    st.subheader("📊 Configurare Predicție")
+    st.subheader("Configurare")
 
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        st.markdown("##### 📅 Parametri Temporali")
+        st.markdown("##### Parametri temporali")
         target_date = st.date_input(
             "Data Predicție",
             value=date.today() + timedelta(days=1),
@@ -105,7 +105,7 @@ with tab_zi:
         is_holiday = st.checkbox("Zi de sărbătoare", value=False, key="zi_holiday")
 
     with col2:
-        st.markdown("##### 🌡️ Condiții Meteo")
+        st.markdown("##### Condiții meteo")
         weather_temp = st.slider(
             "Temperatură Estimată (°C)",
             min_value=-15, max_value=40, value=15, step=1,
@@ -123,13 +123,13 @@ with tab_zi:
         st.caption(f"📊 Sezon: {season}")
 
     with col3:
-        st.markdown("##### 🦠 Condiții Epidemiologice")
+        st.markdown("##### Condiții epidemiologice")
         is_epidemic = st.checkbox("Perioadă de Epidemie", value=False, key="zi_epidemic")
         if is_epidemic:
             st.warning("⚠️ Modul epidemie activat")
 
     st.markdown("---")
-    st.subheader("🏛️ Selectare Departamente")
+    st.subheader("Departamente")
 
     # "Selectează Toate" funcțional prin session_state
     if "zi_depts" not in st.session_state:
@@ -139,7 +139,7 @@ with tab_zi:
     with col_btn:
         st.markdown("")
         st.markdown("")
-        if st.button("✅ Selectează Toate", use_container_width=True, key="zi_sel_all"):
+        if st.button("Selectează toate", use_container_width=True, key="zi_sel_all"):
             st.session_state["zi_depts"] = list(dept_options.keys())
             st.rerun()
 
@@ -156,7 +156,7 @@ with tab_zi:
 
     st.markdown("---")
 
-    if st.button("🚀 Generează Predicții", use_container_width=True, type="primary", key="zi_run"):
+    if st.button("Generează predicții", use_container_width=True, type="primary", key="zi_run"):
         results = []
         errors  = []
 
@@ -195,7 +195,7 @@ with tab_zi:
         if results:
             st.success(f"✅ {len(results)} predicții generate cu succes!")
             st.markdown("---")
-            st.subheader("📊 Rezultate")
+            st.subheader("Rezultate")
 
             df = pd.DataFrame(results)
             display_df = df[["department_name", "predicted_patients", "recommended_nurses"]].copy()
@@ -245,20 +245,20 @@ with tab_zi:
 
             st.markdown("---")
             st.download_button(
-                label="📥 Descarcă CSV",
+                label="Descarcă CSV",
                 data=df.to_csv(index=False),
                 file_name=f"predictii_{target_date}.csv",
                 mime="text/csv",
                 use_container_width=True,
             )
     else:
-        st.info("👆 Configurează parametrii și apasă **Generează Predicții**.")
+        st.info("Configurează parametrii și apasă **Generează predicții**.")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # TAB 2 — Trend pe 7 sau 30 de zile pentru un departament
 # ─────────────────────────────────────────────────────────────────────────────
 with tab_trend:
-    st.subheader("📈 Predicție Trend")
+    st.subheader("Predicție Trend")
 
     col_t1, col_t2, col_t3 = st.columns(3)
 
@@ -291,7 +291,7 @@ with tab_trend:
 
     st.markdown("---")
 
-    if st.button("🚀 Generează Trend", use_container_width=True, type="primary", key="trend_run"):
+    if st.button("Generează trend", use_container_width=True, type="primary", key="trend_run"):
         start = date.today() + timedelta(days=1)
         dates = [start + timedelta(days=i) for i in range(trend_days)]
         dept_id = dept_options[trend_dept]
@@ -364,11 +364,11 @@ with tab_trend:
             col_stats[2].metric("Medie asistente/zi", f"{df_t['recommended_nurses'].mean():.1f}")
 
             st.download_button(
-                label="📥 Descarcă CSV Trend",
+                label="Descarcă CSV",
                 data=df_t.to_csv(index=False),
                 file_name=f"trend_{trend_dept}_{trend_days}zile.csv",
                 mime="text/csv",
                 use_container_width=True,
             )
     else:
-        st.info("👆 Configurează parametrii și apasă **Generează Trend**.")
+        st.info("Configurează parametrii și apasă **Generează trend**.")
