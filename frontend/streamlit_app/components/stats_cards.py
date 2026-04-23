@@ -1,76 +1,56 @@
 """
 MedicSync Frontend - Reusable Stats Components
-Componente pentru afișarea metrici și KPI-uri.
+KPI cards for dashboards.
 """
 import streamlit as st
 
+# Teal accent hex (matches oklch(55% 0.09 195))
+_TEAL = "#4a9db3"
 
-def metric_card(label: str, value: str, delta: str = None, icon: str = "📊"):
-    """
-    Display a metric card with icon.
+_PALETTE = {
+    "teal":   (_TEAL,    "#e8f4f7"),
+    "blue":   (_TEAL,    "#e8f4f7"),
+    "green":  ("#059669", "#ecfdf5"),
+    "red":    ("#dc2626", "#fef2f2"),
+    "orange": ("#d97706", "#fffbeb"),
+}
 
-    Args:
-        label: Metric label
-        value: Metric value
-        delta: Optional delta/change indicator
-        icon: Emoji icon to display
-    """
-    col1, col2 = st.columns([1, 4])
-    with col1:
-        st.markdown(f"### {icon}")
-    with col2:
-        st.metric(label=label, value=value, delta=delta)
+
+def kpi_card(title: str, value: str, subtitle: str = None, color: str = "teal"):
+    border_color, _ = _PALETTE.get(color, _PALETTE["teal"])
+
+    subtitle_html = (
+        f'<p style="margin:0.45rem 0 0;font-size:0.78rem;'
+        f'color:#94a3b8;font-weight:400;line-height:1.4;">{subtitle}</p>'
+        if subtitle else ""
+    )
+
+    st.markdown(f"""
+    <div style="
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-left: 3px solid {border_color};
+        border-radius: 0 12px 12px 0;
+        padding: 1.25rem 1.4rem;
+        box-shadow: 0 1px 3px rgba(15,23,42,0.05);
+        height: 100%;
+        font-family: 'Inter', system-ui, sans-serif;
+    ">
+        <p style="margin:0 0 0.5rem;font-size:0.7rem;font-weight:600;
+                  letter-spacing:0.09em;text-transform:uppercase;color:#94a3b8;">{title}</p>
+        <p style="margin:0;font-size:2.6rem;font-weight:800;line-height:1;
+                  color:#0f172a;letter-spacing:-2px;font-variant-numeric:tabular-nums;">{value}</p>
+        {subtitle_html}
+    </div>
+    """, unsafe_allow_html=True)
+
+
+def metric_card(label: str, value: str, delta: str = None, icon: str = None):
+    st.metric(label=label, value=value, delta=delta)
 
 
 def stats_row(stats: list):
-    """
-    Display a row of stat cards.
-
-    Args:
-        stats: List of dicts with keys: label, value, icon, delta (optional)
-
-    Example:
-        stats_row([
-            {"label": "Total Pacienți", "value": 125, "icon": "👤"},
-            {"label": "Alerte Active", "value": 5, "icon": "🚨", "delta": "+2"}
-        ])
-    """
     cols = st.columns(len(stats))
     for col, stat in zip(cols, stats):
         with col:
             metric_card(**stat)
-
-
-def kpi_card(title: str, value: str, subtitle: str = None, color: str = "blue"):
-    """
-    Display a styled KPI card.
-
-    Args:
-        title: KPI title
-        value: KPI value (large number)
-        subtitle: Optional subtitle/description
-        color: Card color theme (blue, green, red, orange)
-    """
-    color_map = {
-        "blue": "#1f77b4",
-        "green": "#2ca02c",
-        "red": "#d62728",
-        "orange": "#ff7f0e"
-    }
-
-    bg_color = color_map.get(color, "#1f77b4")
-
-    html = f"""
-    <div style="
-        background: linear-gradient(135deg, {bg_color} 0%, {bg_color}dd 100%);
-        padding: 1.5rem;
-        border-radius: 10px;
-        color: white;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    ">
-        <h4 style="margin: 0; opacity: 0.9; font-size: 0.9rem;">{title}</h4>
-        <h1 style="margin: 0.5rem 0; font-size: 2.5rem;">{value}</h1>
-        {f'<p style="margin: 0; opacity: 0.8; font-size: 0.85rem;">{subtitle}</p>' if subtitle else ''}
-    </div>
-    """
-    st.markdown(html, unsafe_allow_html=True)

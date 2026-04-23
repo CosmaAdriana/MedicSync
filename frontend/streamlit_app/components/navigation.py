@@ -200,8 +200,8 @@ def render_top_nav():
 
         /* Sidebar */
         [data-testid="stSidebar"] {
-            background: #f8f9fa !important;
-            border-right: 1px solid #dee2e6 !important;
+            background: #ffffff !important;
+            border-right: 1px solid #e2e8f0 !important;
         }
 
         /* Conținut principal */
@@ -213,64 +213,68 @@ def render_top_nav():
 
         /* Logo */
         .sidebar-logo-wrap {
-            padding: 0.2rem 0 0.9rem;
+            padding: 0.3rem 0 1rem;
             display: block;
         }
 
         .sidebar-subtitle {
-            font-size: 0.65rem;
+            font-size: 0.63rem;
             color: #94a3b8;
-            letter-spacing: 2.5px;
+            letter-spacing: 3px;
             text-transform: uppercase;
-            margin-top: 4px;
+            margin-top: 5px;
+            font-weight: 500;
         }
 
         /* User badge */
         .sidebar-user-badge {
-            background: #ffffff;
-            border: 1px solid #dee2e6;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
             border-radius: 10px;
-            padding: 0.6rem 0.8rem;
-            margin-bottom: 1rem;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+            padding: 0.55rem 0.8rem;
+            margin-bottom: 0.9rem;
         }
 
         .sidebar-user-name {
-            color: #212529;
-            font-size: 0.87rem;
+            color: #0f172a;
+            font-size: 0.85rem;
             font-weight: 600;
+            line-height: 1.3;
         }
 
         .sidebar-user-role {
-            color: #6c757d;
-            font-size: 0.74rem;
+            color: #94a3b8;
+            font-size: 0.72rem;
             margin-top: 2px;
+            font-weight: 500;
         }
 
         /* Nav links */
         [data-testid="stSidebar"] [data-testid="stPageLink"] a {
-            color: #495057 !important;
-            font-size: 0.9rem !important;
+            color: #475569 !important;
+            font-size: 0.875rem !important;
             font-weight: 500 !important;
             border-radius: 8px !important;
-            padding: 0.45rem 0.75rem !important;
-            transition: background 0.15s, color 0.15s !important;
+            padding: 0.42rem 0.7rem !important;
+            transition: background 0.12s, color 0.12s !important;
             display: flex !important;
             align-items: center !important;
             justify-content: flex-start !important;
-            gap: 7px !important;
+            gap: 8px !important;
         }
 
         [data-testid="stSidebar"] [data-testid="stPageLink"] a:hover {
-            background: #e9ecef !important;
-            color: #1a1a2e !important;
+            background: #f1f5f9 !important;
+            color: #0f172a !important;
         }
 
         [data-testid="stSidebar"] a[aria-current="page"] {
-            background: #dbeafe !important;
-            color: #1d4ed8 !important;
-            border-left: 3px solid #1d4ed8 !important;
+            background: oklch(96% 0.025 195) !important;
+            color: oklch(55% 0.09 195) !important;
+            border-left: 3px solid oklch(55% 0.09 195) !important;
+            border-radius: 0 8px 8px 0 !important;
             font-weight: 600 !important;
+            padding-left: calc(0.7rem - 0px) !important;
         }
 
         /* Nav icon */
@@ -278,26 +282,32 @@ def render_top_nav():
             display: inline-flex;
             align-items: center;
             flex-shrink: 0;
-            opacity: 0.6;
+            opacity: 0.55;
+        }
+
+        [data-testid="stSidebar"] a[aria-current="page"] .ms-nav-icon {
+            opacity: 0.85;
         }
 
         /* Logout */
         [data-testid="stSidebar"] [data-testid="stBaseButton-secondary"] {
             background: #fff5f5 !important;
-            border: 1px solid #fca5a5 !important;
+            border: 1px solid #fecaca !important;
             color: #dc2626 !important;
             border-radius: 8px !important;
-            font-size: 0.85rem !important;
+            font-size: 0.83rem !important;
+            font-weight: 500 !important;
         }
 
         [data-testid="stSidebar"] [data-testid="stBaseButton-secondary"]:hover {
             background: #fee2e2 !important;
+            border-color: #fca5a5 !important;
         }
 
         /* Separator */
         [data-testid="stSidebar"] hr {
-            border-color: #dee2e6 !important;
-            margin: 0.7rem 0 !important;
+            border-color: #e2e8f0 !important;
+            margin: 0.6rem 0 !important;
         }
 
         /* Badge notificări */
@@ -306,16 +316,16 @@ def render_top_nav():
             align-items: center;
             justify-content: center;
             border-radius: 99px;
-            font-size: 0.68rem;
+            font-size: 0.65rem;
             font-weight: 700;
-            min-width: 1.25rem;
-            height: 1.25rem;
-            padding: 0 0.3rem;
+            min-width: 1.2rem;
+            height: 1.2rem;
+            padding: 0 0.28rem;
             color: #fff;
             line-height: 1;
             flex-shrink: 0;
             margin-left: auto;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
             pointer-events: none;
         }
     </style>
@@ -325,14 +335,14 @@ def render_top_nav():
         st.markdown("""
             <div class="sidebar-logo-wrap">
                 <svg width="152" height="36" viewBox="0 0 152 36" xmlns="http://www.w3.org/2000/svg">
-                    <!-- Icon mark: blue rounded square + ECG pulse -->
-                    <rect width="36" height="36" rx="9" fill="#2563EB"/>
+                    <!-- Icon mark: teal rounded square + ECG pulse -->
+                    <rect width="36" height="36" rx="9" fill="#4a9db3"/>
                     <polyline points="5,18 10,18 13,9 18,27 21,13 25,18 31,18"
                         fill="none" stroke="white" stroke-width="2.2"
                         stroke-linecap="round" stroke-linejoin="round"/>
                     <!-- Wordmark -->
-                    <text y="25" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="20">
-                        <tspan x="45" font-weight="800" fill="#0f172a" letter-spacing="-0.4">Medic</tspan><tspan font-weight="400" fill="#2563EB" letter-spacing="-0.2">Sync</tspan>
+                    <text y="25" font-family="'Inter',system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="20">
+                        <tspan x="45" font-weight="800" fill="#0f172a" letter-spacing="-0.4">Medic</tspan><tspan font-weight="400" fill="#4a9db3" letter-spacing="-0.2">Sync</tspan>
                     </text>
                 </svg>
                 <div class="sidebar-subtitle">Health 4.0</div>
@@ -343,7 +353,7 @@ def render_top_nav():
             role_label = ROLE_LABELS.get(user_role, user_role)
             st.markdown(f"""
                 <div class="sidebar-user-badge">
-                    <div class="sidebar-user-name"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#495057" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>{user_name}</div>
+                    <div class="sidebar-user-name"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>{user_name}</div>
                     <div class="sidebar-user-role">{role_label}</div>
                 </div>
             """, unsafe_allow_html=True)

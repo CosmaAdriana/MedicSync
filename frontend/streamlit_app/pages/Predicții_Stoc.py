@@ -12,6 +12,7 @@ from auth import require_auth, handle_api_exception
 from components.navigation import render_top_nav
 import pandas as pd
 import plotly.express as px
+from components.chart_theme import apply as ct, bars as ct_bars, TEAL, SLATE_400, AMBER
 
 st.set_page_config(page_title="Predicții Stoc", page_icon="📊", layout="wide",
                    initial_sidebar_state="auto")
@@ -87,13 +88,12 @@ with tab_rec:
         fig = px.bar(
             rec_df.sort_values('recommended_order_qty', ascending=False),
             x='product_name', y='recommended_order_qty',
-            color='recommended_order_qty', color_continuous_scale='Blues',
+            color_discrete_sequence=[TEAL],
             labels={'product_name': 'Produs', 'recommended_order_qty': 'Cantitate'},
             text='recommended_order_qty',
         )
-        fig.update_traces(textposition='outside')
-        fig.update_layout(showlegend=False, height=380, xaxis_tickangle=-30,
-                          coloraxis_showscale=False)
+        ct_bars(fig)
+        ct(fig, title="Cantitate recomandată per produs", height=380, legend=False, xangle=-30)
         st.plotly_chart(fig, use_container_width=True)
 
 # ── TAB 2 — Consum per produs ────────────────────────────────────────────────
@@ -131,28 +131,25 @@ with tab_consum:
             fig2 = px.bar(
                 has_data.sort_values('total_used_30d', ascending=False).head(10),
                 x='product_name', y='total_used_30d',
-                title="Top 10 produse după consum (30 zile)",
+                color_discrete_sequence=[TEAL],
                 labels={'product_name': 'Produs', 'total_used_30d': 'Cantitate'},
-                color='total_used_30d', color_continuous_scale='Reds',
                 text='total_used_30d',
             )
-            fig2.update_traces(textposition='outside')
-            fig2.update_layout(showlegend=False, height=350, xaxis_tickangle=-30,
-                               coloraxis_showscale=False)
+            ct_bars(fig2)
+            ct(fig2, title="Top 10 produse după consum (30 zile)", height=350, legend=False, xangle=-30)
             st.plotly_chart(fig2, use_container_width=True)
 
         with col_c2:
             fig3 = px.bar(
                 has_data.sort_values('avg_daily_7d', ascending=False).head(10),
                 x='product_name', y='avg_daily_7d',
-                title="Consum mediu zilnic (ultimele 7 zile)",
+                color_discrete_sequence=[AMBER],
                 labels={'product_name': 'Produs', 'avg_daily_7d': 'Unități/zi'},
-                color='avg_daily_7d', color_continuous_scale='Oranges',
                 text='avg_daily_7d',
             )
-            fig3.update_traces(textposition='outside', texttemplate='%{text:.1f}')
-            fig3.update_layout(showlegend=False, height=350, xaxis_tickangle=-30,
-                               coloraxis_showscale=False)
+            ct_bars(fig3, color=AMBER)
+            fig3.update_traces(texttemplate='%{text:.1f}')
+            ct(fig3, title="Consum mediu zilnic (ultimele 7 zile)", height=350, legend=False, xangle=-30)
             st.plotly_chart(fig3, use_container_width=True)
 
         if len(no_data) > 0:

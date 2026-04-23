@@ -90,7 +90,7 @@ else:
                 content: "";
                 position: fixed;
                 inset: 0;
-                background: rgba(0, 0, 0, 0.45);
+                background: rgba(0, 0, 0, 0.27);
                 z-index: 0;
             }}
             [data-testid="stVerticalBlock"] {{
@@ -121,12 +121,11 @@ else:
             margin-top: 6vh;
             text-align: center;
             color: white;
-            text-shadow: 0 2px 8px rgba(0,0,0,0.7);
         ">
-            <h1 style="font-size: 3rem; margin-bottom: 0.2rem;">
+            <h1 style="font-size: 3rem; margin-bottom: 0.2rem; opacity: 0.82;">
                 Bună, {get_user_name()}!
             </h1>
-            <p style="font-size: 1.2rem; opacity: 0.9; margin-bottom: 2.5rem;">
+            <p style="font-size: 1.1rem; opacity: 0.62; margin-bottom: 2.5rem;">
                 {role_label}{dept_label} &nbsp;·&nbsp; MedicSync Health 4.0
             </p>
         </div>

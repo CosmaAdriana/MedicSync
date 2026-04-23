@@ -13,6 +13,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from auth import require_auth, get_user_role, handle_api_exception
 from components.navigation import render_top_nav
 from components.stats_cards import kpi_card
+from components.chart_theme import apply as ct, bars as ct_bars, PIE_COLORS, TEAL, SLATE_400, RED
 import cache
 import plotly.express as px
 import plotly.graph_objects as go
@@ -127,10 +128,13 @@ def _dashboard_nurse_doctor():
                     labels=["Internați", "Critici", "Externați"],
                     values=[len(admitted), len(critical_p), len(discharged)],
                     hole=0.45,
-                    marker_colors=["#2ca02c", "#d62728", "#9ca3af"],
+                    marker_colors=PIE_COLORS,
                 ))
-                fig.update_traces(textposition="inside", textinfo="percent+label")
-                fig.update_layout(height=280, showlegend=False, margin=dict(t=10, b=10))
+                fig.update_traces(
+                    textposition="inside", textinfo="percent+label",
+                    textfont=dict(size=13),
+                )
+                ct(fig, height=280, legend=False)
                 st.plotly_chart(fig, use_container_width=True)
 
 
@@ -185,13 +189,12 @@ def _dashboard_manager():
         if not df_h.empty:
             fig = px.bar(
                 df_h, x="department_name", y="total",
-                color="total", color_continuous_scale="Blues",
+                color_discrete_sequence=[TEAL],
                 labels={"total": "Pacienți", "department_name": "Departament"},
                 text="total",
             )
-            fig.update_traces(textposition="outside")
-            fig.update_layout(showlegend=False, height=320, xaxis_tickangle=-30,
-                              coloraxis_showscale=False)
+            ct_bars(fig)
+            ct(fig, height=320, legend=False, xangle=-30)
             st.plotly_chart(fig, use_container_width=True)
         else:
             st.info("Nu există pacienți înregistrați.")
@@ -203,10 +206,13 @@ def _dashboard_manager():
                 labels=["Internați", "Critici", "Externați"],
                 values=[total_admitted, total_critical, total_discharged],
                 hole=0.4,
-                marker_colors=["#2ca02c", "#d62728", "#7f7f7f"],
+                marker_colors=PIE_COLORS,
             ))
-            fig2.update_traces(textposition="inside", textinfo="percent+label")
-            fig2.update_layout(height=320, showlegend=True)
+            fig2.update_traces(
+                textposition="inside", textinfo="percent+label",
+                textfont=dict(size=13),
+            )
+            ct(fig2, height=320)
             st.plotly_chart(fig2, use_container_width=True)
         else:
             st.info("Nu există pacienți înregistrați.")
@@ -298,11 +304,12 @@ def _dashboard_inventory():
         df_inv = pd.DataFrame(inventory).sort_values("current_stock").head(10)
         fig = go.Figure()
         fig.add_bar(name="Stoc curent", x=df_inv["product_name"],
-                    y=df_inv["current_stock"], marker_color="#3b82f6")
+                    y=df_inv["current_stock"], marker_color=TEAL, marker_line_width=0)
         fig.add_bar(name="Stoc minim",  x=df_inv["product_name"],
-                    y=df_inv["min_stock_level"], marker_color="#ef4444", opacity=0.6)
-        fig.update_layout(barmode="group", height=320, xaxis_tickangle=-30,
-                          legend=dict(orientation="h", y=1.1))
+                    y=df_inv["min_stock_level"], marker_color=RED,
+                    marker_line_width=0, opacity=0.55)
+        fig.update_layout(barmode="group")
+        ct(fig, title="Stoc curent vs. stoc minim", height=320, xangle=-30)
         st.plotly_chart(fig, use_container_width=True)
 
 

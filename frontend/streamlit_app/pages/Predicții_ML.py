@@ -16,6 +16,7 @@ from datetime import date, timedelta
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+from components.chart_theme import apply as ct, bars as ct_bars, lines as ct_lines, TEAL, SLATE_400
 
 st.set_page_config(page_title="Predicții ML", page_icon="🤖", layout="wide", initial_sidebar_state="auto")
 require_auth(allowed_roles=["manager"])
@@ -222,25 +223,23 @@ with tab_zi:
             with col_c1:
                 fig = px.bar(
                     df, x="department_name", y="predicted_patients",
-                    color="predicted_patients", color_continuous_scale="Reds",
-                    title="Pacienți Prezis", text="predicted_patients",
+                    color_discrete_sequence=[TEAL],
+                    text="predicted_patients",
                     labels={"predicted_patients": "Pacienți", "department_name": "Departament"},
                 )
-                fig.update_traces(textposition="outside")
-                fig.update_layout(showlegend=False, height=400, xaxis_tickangle=-30,
-                                  coloraxis_showscale=False)
+                ct_bars(fig)
+                ct(fig, title="Pacienți Prezis", height=400, legend=False, xangle=-30)
                 st.plotly_chart(fig, use_container_width=True)
 
             with col_c2:
                 fig2 = px.bar(
                     df, x="department_name", y="recommended_nurses",
-                    color="recommended_nurses", color_continuous_scale="Blues",
-                    title="Asistente Necesare", text="recommended_nurses",
+                    color_discrete_sequence=[SLATE_400],
+                    text="recommended_nurses",
                     labels={"recommended_nurses": "Asistente", "department_name": "Departament"},
                 )
-                fig2.update_traces(textposition="outside")
-                fig2.update_layout(showlegend=False, height=400, xaxis_tickangle=-30,
-                                   coloraxis_showscale=False)
+                ct_bars(fig2, color=SLATE_400)
+                ct(fig2, title="Asistente Necesare", height=400, legend=False, xangle=-30)
                 st.plotly_chart(fig2, use_container_width=True)
 
             st.markdown("---")
@@ -337,23 +336,21 @@ with tab_trend:
             fig_t.add_trace(go.Scatter(
                 x=df_t["date"], y=df_t["predicted_patients"],
                 name="Pacienți Prezis", mode="lines+markers",
-                line=dict(color="#d62728", width=2),
-                marker=dict(size=6),
+                line=dict(color=TEAL, width=2),
+                marker=dict(size=5),
             ))
             fig_t.add_trace(go.Scatter(
                 x=df_t["date"], y=df_t["recommended_nurses"],
                 name="Asistente Necesare", mode="lines+markers",
-                line=dict(color="#1f77b4", width=2, dash="dot"),
-                marker=dict(size=6),
+                line=dict(color=SLATE_400, width=2, dash="dot"),
+                marker=dict(size=5),
                 yaxis="y2",
             ))
+            ct(fig_t, title=f"Trend Predicție — {trend_dept}", height=450, dual_y=True)
             fig_t.update_layout(
-                title=f"Trend Predicție — {trend_dept}",
                 xaxis_title="Dată",
-                yaxis=dict(title="Pacienți Prezis", showgrid=True),
-                yaxis2=dict(title="Asistente Necesare", overlaying="y", side="right", showgrid=False),
-                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-                height=450,
+                yaxis_title="Pacienți Prezis",
+                yaxis2_title="Asistente Necesare",
             )
             st.plotly_chart(fig_t, use_container_width=True)
 

@@ -10,6 +10,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from auth import require_auth, get_user_role, handle_api_exception
 from components.navigation import render_top_nav
+from components.chart_theme import apply as ct, lines as ct_lines, TEAL, TEAL_MID, SLATE_400, RED, AMBER
 import cache
 import plotly.graph_objects as go
 from datetime import datetime
@@ -149,32 +150,37 @@ try:
 
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=times, y=pulse,     name='Puls (bpm)',
-                                  line=dict(color='#d62728', width=2), mode='lines+markers'))
+                                  line=dict(color=TEAL, width=2), mode='lines+markers'))
         fig.add_trace(go.Scatter(x=times, y=o2_sat,    name='SpO₂ (%)',
-                                  line=dict(color='#1f77b4', width=2), mode='lines+markers'))
-        fig.add_trace(go.Scatter(x=times, y=resp_rate, name='Frecvență Respiratorie (rpm)',
-                                  line=dict(color='#2ca02c', width=2), mode='lines+markers'))
-        fig.add_hline(y=92,  line_dash="dash", line_color="red",    annotation_text="SpO₂ critic (<92%)")
-        fig.add_hline(y=150, line_dash="dash", line_color="orange", annotation_text="Puls critic (>150 bpm)")
-        fig.update_layout(
-            title="Evoluție Semne Vitale",
-            xaxis_title="Data/Ora",
-            yaxis_title="Valoare",
-            hovermode='x unified',
-            height=500,
-        )
+                                  line=dict(color=SLATE_400, width=2), mode='lines+markers'))
+        fig.add_trace(go.Scatter(x=times, y=resp_rate, name='Frecv. Respiratorie (rpm)',
+                                  line=dict(color=TEAL_MID, width=2), mode='lines+markers'))
+        fig.add_hline(y=92,  line_dash="dot", line_color=RED,  line_width=1,
+                      annotation_text="SpO₂ critic <92%",
+                      annotation_font=dict(size=12, color=RED))
+        fig.add_hline(y=150, line_dash="dot", line_color=AMBER, line_width=1,
+                      annotation_text="Puls critic >150 bpm",
+                      annotation_font=dict(size=12, color=AMBER))
+        ct_lines(fig)
+        ct(fig, title="Evoluție Semne Vitale", height=460)
+        fig.update_layout(xaxis_title="Data/Ora", yaxis_title="Valoare")
         st.plotly_chart(fig, use_container_width=True)
 
         st.markdown("#### Tensiune arterială")
         fig_bp = go.Figure()
         fig_bp.add_trace(go.Scatter(x=times, y=bp_systolic,  name='Sistolică (mmHg)',
-                                     line=dict(color='#d62728', width=2), mode='lines+markers'))
+                                     line=dict(color=RED, width=2), mode='lines+markers'))
         fig_bp.add_trace(go.Scatter(x=times, y=bp_diastolic, name='Diastolică (mmHg)',
-                                     line=dict(color='#ff7f0e', width=2), mode='lines+markers'))
-        fig_bp.add_hline(y=180, line_dash="dash", line_color="red",    annotation_text="Hipertensiune critică (>180)")
-        fig_bp.add_hline(y=90,  line_dash="dash", line_color="orange", annotation_text="Hipotensiune (<90)")
-        fig_bp.update_layout(title="Evoluție Tensiune Arterială", xaxis_title="Data/Ora",
-                             yaxis_title="mmHg", hovermode='x unified', height=400)
+                                     line=dict(color=AMBER, width=2), mode='lines+markers'))
+        fig_bp.add_hline(y=180, line_dash="dot", line_color=RED,  line_width=1,
+                         annotation_text="Hipertensiune critică >180",
+                         annotation_font=dict(size=12, color=RED))
+        fig_bp.add_hline(y=90,  line_dash="dot", line_color=AMBER, line_width=1,
+                         annotation_text="Hipotensiune <90",
+                         annotation_font=dict(size=12, color=AMBER))
+        ct_lines(fig_bp)
+        ct(fig_bp, title="Evoluție Tensiune Arterială", height=380)
+        fig_bp.update_layout(xaxis_title="Data/Ora", yaxis_title="mmHg")
         st.plotly_chart(fig_bp, use_container_width=True)
 
         st.markdown("#### Înregistrări")
