@@ -20,7 +20,7 @@ from auth import require_auth, get_user_role, handle_api_exception
 from components.navigation import render_top_nav
 
 st.set_page_config(page_title="Grafic Lunar", page_icon="📅", layout="wide",
-                   initial_sidebar_state="collapsed")
+                   initial_sidebar_state="auto")
 require_auth(allowed_roles=["nurse", "manager"])
 render_top_nav()
 

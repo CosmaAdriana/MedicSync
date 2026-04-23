@@ -140,10 +140,11 @@ def inject_global_css():
     [data-testid="InputInstructions"] { display: none !important; }
 
     /* ── Hide Streamlit branding ──────────────────────────────────────── */
-    #MainMenu { visibility: hidden; }
-    footer    { visibility: hidden; }
+    footer { visibility: hidden; }
     [data-testid="stHeader"] { background: transparent !important; }
-    [data-testid="stToolbar"] { visibility: hidden !important; }
     [data-testid="stDecoration"] { display: none !important; }
+    [data-testid="stMainMenuPopover"] { display: none !important; }
+    /* Ascunde elementele din toolbar dar NU butonul de sidebar */
+    [data-testid="stToolbarActions"] { visibility: hidden !important; }
 
     </style>""", unsafe_allow_html=True)

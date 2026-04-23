@@ -13,7 +13,7 @@ from components.navigation import render_top_nav
 import cache
 import pandas as pd
 
-st.set_page_config(page_title="Comenzi", page_icon="🛒", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Comenzi", page_icon="🛒", layout="wide", initial_sidebar_state="auto")
 require_auth(allowed_roles=["inventory_manager", "manager"])
 render_top_nav()
 

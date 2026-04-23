@@ -20,7 +20,7 @@ import pandas as pd
 from datetime import datetime
 
 st.set_page_config(page_title="Dashboard", page_icon="🏥", layout="wide",
-                   initial_sidebar_state="collapsed")
+                   initial_sidebar_state="auto")
 require_auth()
 render_top_nav()
 

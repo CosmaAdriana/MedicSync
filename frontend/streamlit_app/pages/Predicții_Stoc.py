@@ -14,7 +14,7 @@ import pandas as pd
 import plotly.express as px
 
 st.set_page_config(page_title="Predicții Stoc", page_icon="📊", layout="wide",
-                   initial_sidebar_state="collapsed")
+                   initial_sidebar_state="auto")
 require_auth(allowed_roles=["inventory_manager", "manager"])
 render_top_nav()
 
