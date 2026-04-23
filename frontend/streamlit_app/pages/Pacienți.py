@@ -56,9 +56,9 @@ with tab_lista:
             options=["Toate", "admitted", "critical", "discharged"],
             format_func=lambda x: {
                 "Toate": "Toate statusurile",
-                "admitted": "✅ Internați",
-                "critical": "🚨 Critici",
-                "discharged": "📤 Externați"
+                "admitted": "Internați",
+                "critical": "Critici",
+                "discharged": "Externați"
             }[x]
         )
 
@@ -75,20 +75,18 @@ with tab_lista:
         status_val = status_filter if status_filter != "Toate" else None
         patients = cache.get_patients(api.token, status=status_val)
 
-        st.subheader(f"📋 Pacienți ({len(patients)} rezultate)")
+        st.subheader(f"Pacienți ({len(patients)} rezultate)")
 
         if patients:
             df = pd.DataFrame(patients)
             df['department_name'] = df['department_id'].map(dept_map).fillna('N/A')
             df['admission_date']  = pd.to_datetime(df['admission_date']).dt.strftime('%d.%m.%Y')
 
-            status_icons = {'admitted': '✅', 'critical': '🚨', 'discharged': '📤'}
-            status_ro    = {'admitted': 'Internat', 'critical': 'Critic', 'discharged': 'Externat'}
-            df['status_ro']   = df['status'].map(status_ro)
-            df['status_icon'] = df['status'].map(status_icons)
+            status_ro = {'admitted': 'Internat', 'critical': 'Critic', 'discharged': 'Externat'}
+            df['status_ro'] = df['status'].map(status_ro)
 
-            display_df = df[['id', 'status_icon', 'full_name', 'department_name', 'admission_date', 'status_ro']]
-            display_df.columns = ['ID', '📊', 'Nume Pacient', 'Departament', 'Data Internare', 'Status']
+            display_df = df[['id', 'full_name', 'department_name', 'admission_date', 'status_ro']]
+            display_df.columns = ['ID', 'Nume Pacient', 'Departament', 'Data Internare', 'Status']
 
             st.dataframe(
                 display_df,
@@ -96,7 +94,6 @@ with tab_lista:
                 hide_index=True,
                 column_config={
                     "ID":            st.column_config.NumberColumn("ID",            width="small"),
-                    "📊":            st.column_config.TextColumn("📊",              width="small"),
                     "Nume Pacient":  st.column_config.TextColumn("Nume Pacient",    width="medium"),
                     "Departament":   st.column_config.TextColumn("Departament",     width="medium"),
                     "Data Internare":st.column_config.TextColumn("Data Internare",  width="small"),
@@ -115,7 +112,7 @@ with tab_lista:
 
     except Exception as e:
         if not handle_api_exception(e):
-            st.error(f"❌ Eroare la încărcarea datelor: {str(e)}")
+            st.error(f"Eroare la încărcarea datelor: {str(e)}")
             st.exception(e)
 
 # ============================================================================
@@ -155,8 +152,8 @@ with tab_interneaza:
                 "Status Inițial",
                 options=["admitted", "critical"],
                 format_func=lambda x: {
-                    "admitted": "✅ Internat (stabil)",
-                    "critical": "🚨 Critic (necesită atenție urgentă)"
+                    "admitted": "Internat (stabil)",
+                    "critical": "Critic (necesită atenție urgentă)"
                 }[x]
             )
 
@@ -171,9 +168,9 @@ with tab_interneaza:
 
         if submit:
             if not full_name or full_name.strip() == "":
-                st.error("⚠️ Numele pacientului este obligatoriu!")
+                st.error("Numele pacientului este obligatoriu!")
             elif not dept_select:
-                st.error("⚠️ Selectează un departament!")
+                st.error("Selectează un departament!")
             else:
                 try:
                     result = api.create_patient(
@@ -182,7 +179,7 @@ with tab_interneaza:
                         admission_date=str(admission_date),
                         status=new_status
                     )
-                    st.success(f"✅ Pacient **{result['full_name']}** internat cu succes în {dept_select}!")
+                    st.success(f"Pacient **{result['full_name']}** internat cu succes în {dept_select}!")
                     st.info(f"ID Pacient: {result['id']}")
                     st.balloons()
                     cache.get_patients.clear()
@@ -191,7 +188,7 @@ with tab_interneaza:
                     st.rerun()
                 except Exception as e:
                     if not handle_api_exception(e):
-                        st.error(f"❌ Eroare la internarea pacientului: {str(e)}")
+                        st.error(f"Eroare la internarea pacientului: {str(e)}")
 
 # ============================================================================
 # TAB 3 — Externează Pacient
@@ -208,7 +205,7 @@ with tab_externeaza:
                 margin: 2rem auto;
                 max-width: 600px;
             ">
-                <div style="font-size: 4rem; margin-bottom: 1rem;">🔒</div>
+                <div style="margin-bottom: 1rem;"><svg xmlns="http://www.w3.org/2000/svg" width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#6c757d" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
                 <h2 style="color: #495057; margin-bottom: 0.5rem;">Secțiune restricționată</h2>
                 <p style="color: #6c757d; font-size: 1.1rem;">
                     Doar medicii și managerii pot externa pacienți.
@@ -225,7 +222,7 @@ with tab_externeaza:
             active_patients = admitted + critical
 
             if not active_patients:
-                st.warning("⚠️ Nu există pacienți activi (internați sau critici) în sistem.")
+                st.warning("Nu există pacienți activi (internați sau critici) în sistem.")
             else:
                 patient_options = {
                     f"{p['full_name']} (ID: {p['id']}) — {p['status'].upper()}": p
@@ -261,9 +258,9 @@ with tab_externeaza:
                         "Alege statusul",
                         options=["discharged", "admitted", "critical"],
                         format_func=lambda x: {
-                            "discharged": "📤 Externat",
-                            "admitted":   "✅ Internat (stabil)",
-                            "critical":   "🚨 Critic"
+                            "discharged": "Externat",
+                            "admitted":   "Internat (stabil)",
+                            "critical":   "Critic"
                         }[x],
                         label_visibility="collapsed"
                     )
@@ -271,7 +268,7 @@ with tab_externeaza:
                 st.markdown("")
 
                 if new_status == "discharged":
-                    st.warning(f"⚠️ Ești pe cale să externezi pacientul **{selected['full_name']}**.")
+                    st.warning(f"Ești pe cale să externezi pacientul **{selected['full_name']}**.")
 
                 col_btn, _ = st.columns([1, 3])
                 with col_btn:
@@ -285,19 +282,19 @@ with tab_externeaza:
                     try:
                         result = api.update_patient_status(selected['id'], new_status)
                         if new_status == "discharged":
-                            st.success(f"✅ Pacientul **{result['full_name']}** a fost externat cu succes!")
+                            st.success(f"Pacientul **{result['full_name']}** a fost externat cu succes!")
                             st.balloons()
                         else:
-                            st.success(f"✅ Statusul pacientului **{result['full_name']}** a fost actualizat la **{new_status}**!")
+                            st.success(f"Statusul pacientului **{result['full_name']}** a fost actualizat la **{new_status}**!")
                         cache.get_patients.clear()
                         cache.get_hospital_stats.clear()
                         import time; time.sleep(2)
                         st.rerun()
                     except Exception as e:
                         if not handle_api_exception(e):
-                            st.error(f"❌ Eroare la actualizarea statusului: {str(e)}")
+                            st.error(f"Eroare la actualizarea statusului: {str(e)}")
 
         except Exception as e:
             if not handle_api_exception(e):
-                st.error(f"❌ Eroare la încărcarea datelor: {str(e)}")
+                st.error(f"Eroare la încărcarea datelor: {str(e)}")
                 st.exception(e)

@@ -64,7 +64,7 @@ try:
     """)
 except Exception as e:
     handle_api_exception(e)
-    st.warning("⚠️ Nu s-au putut încărca informațiile modelului.")
+    st.warning("Nu s-au putut încărca informațiile modelului.")
     model_info = None
 
 st.markdown("---")
@@ -113,20 +113,20 @@ with tab_zi:
         )
         month = target_date.month
         if month in (12, 1, 2):
-            season = "❄️ Iarnă"
+            season = "Iarnă"
         elif month in (3, 4, 5):
-            season = "🌸 Primăvară"
+            season = "Primăvară"
         elif month in (6, 7, 8):
-            season = "☀️ Vară"
+            season = "Vară"
         else:
-            season = "🍂 Toamnă"
-        st.caption(f"📊 Sezon: {season}")
+            season = "Toamnă"
+        st.caption(f"Sezon: {season}")
 
     with col3:
         st.markdown("##### Condiții epidemiologice")
         is_epidemic = st.checkbox("Perioadă de Epidemie", value=False, key="zi_epidemic")
         if is_epidemic:
-            st.warning("⚠️ Modul epidemie activat")
+            st.warning("Modul epidemie activat")
 
     st.markdown("---")
     st.subheader("Departamente")
@@ -151,7 +151,7 @@ with tab_zi:
         )
 
     if not selected_depts:
-        st.warning("⚠️ Selectează cel puțin un departament.")
+        st.warning("Selectează cel puțin un departament.")
         st.stop()
 
     st.markdown("---")
@@ -193,7 +193,7 @@ with tab_zi:
         progress_bar.empty()
 
         if results:
-            st.success(f"✅ {len(results)} predicții generate cu succes!")
+            st.success(f"{len(results)} predicții generate cu succes!")
             st.markdown("---")
             st.subheader("Rezultate")
 
@@ -287,7 +287,7 @@ with tab_trend:
     with col_t3:
         trend_epidemic = st.checkbox("Perioadă de epidemie", value=False, key="trend_epidemic")
         if trend_epidemic:
-            st.warning("⚠️ Modul epidemie activat")
+            st.warning("Modul epidemie activat")
 
     st.markdown("---")
 
@@ -331,7 +331,7 @@ with tab_trend:
             df_t = pd.DataFrame(results_trend).sort_values("date")
             df_t["date"] = pd.to_datetime(df_t["date"])
 
-            st.success(f"✅ Trend generat pentru **{trend_dept}** — următoarele {trend_days} zile")
+            st.success(f"Trend generat pentru **{trend_dept}** — următoarele {trend_days} zile")
 
             fig_t = go.Figure()
             fig_t.add_trace(go.Scatter(

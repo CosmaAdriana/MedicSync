@@ -112,7 +112,7 @@ else:
             dept_map = {d["id"]: d["name"] for d in depts}
             dept_name = dept_map.get(user_obj["department_id"], "")
             if dept_name:
-                dept_label = f" &nbsp;·&nbsp; 🏥 {dept_name}"
+                dept_label = f' &nbsp;·&nbsp; <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg> {dept_name}'
         except Exception:
             pass
 
@@ -124,7 +124,7 @@ else:
             text-shadow: 0 2px 8px rgba(0,0,0,0.7);
         ">
             <h1 style="font-size: 3rem; margin-bottom: 0.2rem;">
-                Bună, {get_user_name()}! 👋
+                Bună, {get_user_name()}!
             </h1>
             <p style="font-size: 1.2rem; opacity: 0.9; margin-bottom: 2.5rem;">
                 {role_label}{dept_label} &nbsp;·&nbsp; MedicSync Health 4.0
@@ -142,10 +142,14 @@ else:
 
         _, c1, c2, c3, _ = st.columns([1, 1, 1, 1, 1])
 
+        _icon_dept   = '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>'
+        _icon_admit  = '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>'
+        _icon_crit   = '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>'
+
         for col, icon, label, value, color in [
-            (c1, "🏛️", "Departamente",      len(departments), "#1f77b4"),
-            (c2, "✅", "Pacienți Internați", len(admitted),    "#2ca02c"),
-            (c3, "🚨", "Pacienți Critici",   len(critical),    "#d62728"),
+            (c1, _icon_dept,  "Departamente",      len(departments), "#1f77b4"),
+            (c2, _icon_admit, "Pacienți Internați", len(admitted),    "#2ca02c"),
+            (c3, _icon_crit,  "Pacienți Critici",   len(critical),    "#d62728"),
         ]:
             col.markdown(f"""
                 <div style="
@@ -158,7 +162,7 @@ else:
                     color: white;
                     text-shadow: 0 1px 4px rgba(0,0,0,0.5);
                 ">
-                    <div style="font-size:2rem;">{icon}</div>
+                    <div style="margin-bottom:0.3rem;">{icon}</div>
                     <div style="font-size:2.2rem; font-weight:700;">{value}</div>
                     <div style="font-size:0.85rem; opacity:0.85;">{label}</div>
                 </div>

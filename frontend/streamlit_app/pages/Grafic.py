@@ -249,7 +249,7 @@ def _nurse_schedule_view(api):
 
         finalizat = saved.get("is_finalized", False)
         st.caption(
-            f"{'✅ Grafic finalizat' if finalizat else '⏳ Grafic în lucru (poate fi modificat)'}"
+            "Grafic finalizat" if finalizat else "Grafic în lucru (poate fi modificat)"
         )
 
     except Exception as e:
@@ -278,12 +278,12 @@ def nurse_view(api):
     st.divider()
 
     # ── Formular cerere nouă ─────────────────────────────────────────────────
-    with st.expander("➕ Depune cerere nouă", expanded=True):
+    with st.expander("Depune cerere nouă", expanded=True):
         with st.form("form_request"):
             request_type = st.selectbox(
                 "Tip cerere",
                 options=["vacation", "day_off"],
-                format_func=lambda x: "🌴 Concediu (scade din sold)" if x == "vacation" else "🗓️ Zi liberă",
+                format_func=lambda x: "Concediu (scade din sold)" if x == "vacation" else "Zi liberă",
             )
 
             # Luna viitoare implicit
@@ -311,7 +311,7 @@ def nurse_view(api):
                             end_date=end.isoformat(),
                             notes=notes or None,
                         )
-                        st.success("✅ Cererea a fost trimisă cu succes!")
+                        st.success("Cererea a fost trimisă cu succes!")
                         st.rerun()
                     except Exception as e:
                         if not handle_api_exception(e):
@@ -319,7 +319,7 @@ def nurse_view(api):
                                 msg = e.response.json().get("detail", str(e))
                             except Exception:
                                 msg = str(e)
-                            st.error(f"❌ {msg}")
+                            st.error(f"{msg}")
 
     st.divider()
 
@@ -330,9 +330,9 @@ def nurse_view(api):
         if not requests:
             st.info("Nu ai nicio cerere depusă.")
         else:
-            STATUS_ICONS = {"pending": "⏳", "approved": "✅", "rejected": "❌"}
+            STATUS_ICONS = {"pending": "·", "approved": "·", "rejected": "·"}
             STATUS_LABELS = {"pending": "În așteptare", "approved": "Aprobată", "rejected": "Respinsă"}
-            TYPE_LABELS = {"vacation": "🌴 Concediu", "day_off": "🗓️ Zi liberă"}
+            TYPE_LABELS = {"vacation": "Concediu", "day_off": "Zi liberă"}
 
             for req in requests:
                 status_icon = STATUS_ICONS.get(req["status"], "")
@@ -400,7 +400,7 @@ def manager_view(api):
     st.divider()
 
     # ── Cereri în așteptare ──────────────────────────────────────────────────
-    with st.expander("⏳ Cereri de concediu în așteptare", expanded=False):
+    with st.expander("Cereri de concediu în așteptare", expanded=False):
         _manager_requests(api, dept_id)
 
     st.divider()
@@ -416,14 +416,14 @@ def manager_view(api):
                 st.session_state["schedule_dept"] = dept_id
                 st.session_state["schedule_year"] = int(year)
                 st.session_state["schedule_month"] = month
-                st.success(f"✅ Grafic generat pentru {len(result.get('nurses', []))} asistenți.")
+                st.success(f"Grafic generat pentru {len(result.get('nurses', []))} asistenți.")
             except Exception as e:
                 if not handle_api_exception(e):
                     try:
                         msg = e.response.json().get("detail", str(e))
                     except Exception:
                         msg = str(e)
-                    st.error(f"❌ {msg}")
+                    st.error(f"{msg}")
 
     if col_load.button("Încarcă grafic salvat", use_container_width=True):
         try:
@@ -433,7 +433,7 @@ def manager_view(api):
             st.session_state["schedule_dept"] = dept_id
             st.session_state["schedule_year"] = int(year)
             st.session_state["schedule_month"] = month
-            st.success("✅ Grafic salvat încărcat.")
+            st.success("Grafic salvat încărcat.")
         except Exception as e:
             if not handle_api_exception(e):
                 st.info("Nu există grafic salvat pentru această lună și departament.")
@@ -503,11 +503,11 @@ def manager_view(api):
                         is_finalized=False,
                     )
                     st.session_state["schedule_data"] = updated
-                    st.success("✅ Grafic salvat!")
+                    st.success("Grafic salvat!")
                     st.rerun()
                 except Exception as e:
                     if not handle_api_exception(e):
-                        st.error(f"❌ {e}")
+                        st.error(f"{e}")
 
             if col_final.button("Finalizează & Salvează", use_container_width=True, type="primary"):
                 updated = _df_to_schedule_data(edited_df, sched, int(year), month)
@@ -520,11 +520,11 @@ def manager_view(api):
                         is_finalized=True,
                     )
                     st.session_state["schedule_data"] = updated
-                    st.success("✅ Grafic finalizat!")
+                    st.success("Grafic finalizat!")
                     st.rerun()
                 except Exception as e:
                     if not handle_api_exception(e):
-                        st.error(f"❌ {e}")
+                        st.error(f"{e}")
 
         # ── Export CSV ───────────────────────────────────────────────────────
         csv_bytes = _export_csv(df, int(year), month)
@@ -542,7 +542,7 @@ def manager_view(api):
         # ── Publică ──────────────────────────────────────────────────────────
         is_finalized = st.session_state.get("schedule_data", {}).get("is_finalized", False)
         if is_finalized:
-            st.success("✅ Graficul este deja publicat — asistentele îl pot vedea.")
+            st.success("Graficul este deja publicat — asistentele îl pot vedea.")
         else:
             st.info("Graficul nu este publicat încă. Asistentele nu îl pot vedea.")
 
@@ -563,11 +563,11 @@ def manager_view(api):
                 updated = dict(sched)
                 updated["is_finalized"] = True
                 st.session_state["schedule_data"] = updated
-                st.success(f"✅ Grafic publicat! Asistentele din {dept_name} îl pot vedea acum.")
+                st.success(f"Grafic publicat! Asistentele din {dept_name} îl pot vedea acum.")
                 st.rerun()
             except Exception as e:
                 if not handle_api_exception(e):
-                    st.error(f"❌ {e}")
+                    st.error(f"{e}")
 
 
 def _show_schedule_stats(sched: dict, year: int, month: int):
@@ -601,10 +601,10 @@ def _show_schedule_stats(sched: dict, year: int, month: int):
         st.markdown(
             f'<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;'
             f'padding:0.6rem 1rem;margin-bottom:0.8rem;font-size:0.85rem;">'
-            f'🎯 <b>Target staffing per zi:</b> &nbsp;'
-            f'<span style="color:#1d4ed8;">⬛ {targets.get("D", "?")} Dimineață</span> &nbsp;·&nbsp; '
-            f'<span style="color:#b45309;">⬛ {targets.get("A", "?")} Amiază</span> &nbsp;·&nbsp; '
-            f'<span style="color:#6d28d9;">⬛ {targets.get("N", "?")} Noapte</span>'
+            f'<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg> <b>Target staffing per zi:</b> &nbsp;'
+            f'<span style="color:#1d4ed8;"><b>●</b> {targets.get("D", "?")} Dimineață</span> &nbsp;·&nbsp; '
+            f'<span style="color:#b45309;"><b>●</b> {targets.get("A", "?")} Amiază</span> &nbsp;·&nbsp; '
+            f'<span style="color:#6d28d9;"><b>●</b> {targets.get("N", "?")} Noapte</span>'
             f'</div>',
             unsafe_allow_html=True,
         )
@@ -629,9 +629,9 @@ def _show_schedule_stats(sched: dict, year: int, month: int):
 
         st.caption(
             f"Ture per asistent: medie **{avg:.1f}** · min **{min_n}** · max **{max_n}** "
-            f"({'✅ echilibrat' if echilibru_ture else '⚠️ dezechilibrat'})  \n"
+            f"({'echilibrat' if echilibru_ture else 'dezechilibrat'})  \n"
             f"Nopți per asistent: medie **{avg_nights:.1f}** · min **{min_nights}** · max **{max_nights}** "
-            f"({'✅ echilibrat' if echilibru_nopti else '⚠️ dezechilibrat'})"
+            f"({'echilibrat' if echilibru_nopti else 'dezechilibrat'})"
         )
 
 
@@ -647,21 +647,21 @@ def _manager_requests(api, dept_id: int):
         for req in pending:
             days = (date.fromisoformat(req["end_date"]) -
                     date.fromisoformat(req["start_date"])).days + 1
-            type_label = "🌴 Concediu" if req["request_type"] == "vacation" else "🗓️ Zi liberă"
+            type_label = "Concediu" if req["request_type"] == "vacation" else "Zi liberă"
 
             col_info, col_app, col_rej = st.columns([4, 1, 1])
             col_info.markdown(
                 f"**{req.get('nurse_name', 'N/A')}** — {type_label}  \n"
-                f"📅 {req['start_date']} → {req['end_date']} ({days} {'zile' if days > 1 else 'zi'})"
+                f"{req['start_date']} → {req['end_date']} ({days} {'zile' if days > 1 else 'zi'})"
                 + (f"  \n_{req['notes']}_" if req.get("notes") else "")
             )
-            if col_app.button("✅", key=f"app_{req['id']}", help="Aprobă", use_container_width=True):
+            if col_app.button("Aprobă", key=f"app_{req['id']}", use_container_width=True, type="primary"):
                 try:
                     api.review_vacation_request(req["id"], "approved")
                     st.rerun()
                 except Exception as e:
                     handle_api_exception(e)
-            if col_rej.button("❌", key=f"rej_{req['id']}", help="Respinge", use_container_width=True):
+            if col_rej.button("Respinge", key=f"rej_{req['id']}", use_container_width=True):
                 try:
                     api.review_vacation_request(req["id"], "rejected")
                     st.rerun()

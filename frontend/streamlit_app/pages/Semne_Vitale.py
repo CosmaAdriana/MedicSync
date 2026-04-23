@@ -20,10 +20,10 @@ require_auth(allowed_roles=["nurse", "doctor", "manager"])
 render_top_nav()
 
 RISK_LABELS = {
-    "critical": ("🔴", "Critic"),
-    "high":     ("🟠", "Ridicat"),
-    "medium":   ("🟡", "Mediu"),
-    "low":      ("🟢", "Scăzut"),
+    "critical": ("", "Critic"),
+    "high":     ("", "Ridicat"),
+    "medium":   ("", "Mediu"),
+    "low":      ("", "Scăzut"),
 }
 
 STATUS_RO = {
@@ -50,7 +50,7 @@ try:
     patients = pts["admitted"] + pts["critical"]
 
     if not patients:
-        st.warning("⚠️ Nu există pacienți internați în secția ta în acest moment.")
+        st.warning("Nu există pacienți internați în secția ta în acest moment.")
         st.stop()
 
     patient_options = {
@@ -83,19 +83,22 @@ try:
     unresolved_alerts = [a for a in alerts if not a['is_resolved']]
 
     if unresolved_alerts:
-        st.error(f"⚠️ **{len(unresolved_alerts)} ALERTE ACTIVE** pentru acest pacient!")
+        st.error(f"**{len(unresolved_alerts)} ALERTE ACTIVE** pentru acest pacient!")
 
         for alert in unresolved_alerts[:5]:
-            icon, label = RISK_LABELS.get(alert['risk_level'], ("⚪", alert['risk_level']))
+            icon, label = RISK_LABELS.get(alert['risk_level'], ("", alert['risk_level']))
             alert_time  = datetime.fromisoformat(alert['created_at'].replace('Z', ''))
 
+            _risk_colors = {"Critic": "#dc2626", "Ridicat": "#ea580c", "Mediu": "#ca8a04", "Scăzut": "#16a34a"}
+            _dot = f'<span style="color:{_risk_colors.get(label, "#64748b")};font-size:1.1em">●</span>'
             col_msg, col_btn = st.columns([4, 1])
             with col_msg:
-                st.warning(f"""
-                {icon} **[{label.upper()}]** {alert['message']}
-
-                📅 {alert_time.strftime('%d.%m.%Y %H:%M')} · ID Alertă: {alert['id']}
-                """)
+                st.markdown(f"""
+                <div style="background:#fefce8;border:1px solid #fde68a;border-radius:8px;padding:0.75rem 1rem;font-size:0.875rem;">
+                {_dot} <b>[{label.upper()}]</b> {alert['message']}<br>
+                <span style="color:#64748b;font-size:0.8rem;">{alert_time.strftime('%d.%m.%Y %H:%M')} · ID Alertă: {alert['id']}</span>
+                </div>
+                """, unsafe_allow_html=True)
             with col_btn:
                 st.markdown("")
                 st.markdown("")
@@ -116,10 +119,10 @@ try:
                             st.error(f"Eroare: {str(e)}")
 
         if len(unresolved_alerts) > 5:
-            st.info(f"ℹ️ +{len(unresolved_alerts) - 5} alerte suplimentare")
+            st.info(f"+{len(unresolved_alerts) - 5} alerte suplimentare")
 
     else:
-        st.success("✅ Nu există alerte active pentru acest pacient!")
+        st.success("Nu există alerte active pentru acest pacient!")
 
     st.markdown("---")
 
@@ -229,13 +232,13 @@ try:
                         respiratory_rate=resp_input,
                         oxygen_saturation=o2_input
                     )
-                    st.success("✅ Semne vitale înregistrate cu succes!")
+                    st.success("Semne vitale înregistrate cu succes!")
                     if result.get('alert'):
                         alert = result['alert']
-                        icon, label = RISK_LABELS.get(alert['risk_level'], ("⚪", alert['risk_level']))
-                        st.error(f"🚨 **ALERTĂ CLINICĂ!** {icon} [{label.upper()}] {alert['message']}")
+                        icon, label = RISK_LABELS.get(alert['risk_level'], ("", alert['risk_level']))
+                        st.error(f"ALERTĂ CLINICĂ! [{label.upper()}] {alert['message']}")
                     else:
-                        st.info("ℹ️ Valorile sunt în limite normale.")
+                        st.info("Valorile sunt în limite normale.")
                     cache.get_patient_vitals.clear()
                     cache.get_patient_alerts.clear()
                     cache.get_patients.clear()
@@ -243,11 +246,11 @@ try:
                     st.rerun()
                 except Exception as e:
                     if not handle_api_exception(e):
-                        st.error(f"❌ Eroare la salvare: {str(e)}")
+                        st.error(f"Eroare la salvare: {str(e)}")
     else:
-        st.info("ℹ️ Doar asistenții medicali pot înregistra semne vitale noi.")
+        st.info("Doar asistenții medicali pot înregistra semne vitale noi.")
 
 except Exception as e:
     if not handle_api_exception(e):
-        st.error(f"❌ Eroare la încărcarea datelor: {str(e)}")
+        st.error(f"Eroare la încărcarea datelor: {str(e)}")
         st.exception(e)

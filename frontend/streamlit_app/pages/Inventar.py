@@ -69,9 +69,9 @@ if tab_stoc is not None:
                 ok_stoc  = [i for i in inventory if i['current_stock'] >= i['min_stock_level']]
 
                 c1, c2, c3 = st.columns(3)
-                c1.metric("📦 Total Produse",  len(inventory))
-                c2.metric("✅ Stoc OK",        len(ok_stoc))
-                c3.metric("🔴 Sub Stoc Minim", len(sub_stoc))
+                c1.metric("Total Produse",  len(inventory))
+                c2.metric("Stoc OK",        len(ok_stoc))
+                c3.metric("Sub Stoc Minim", len(sub_stoc))
 
                 st.markdown("---")
 
@@ -92,7 +92,7 @@ if tab_stoc is not None:
                 df = pd.DataFrame(inventory)
                 df['Departament'] = df['department_id'].map(dept_map).fillna('—')
                 df['Status'] = df.apply(
-                    lambda r: "🔴 Sub stoc minim" if r['current_stock'] < r['min_stock_level'] else "✅ Stoc OK",
+                    lambda r: "Sub stoc minim" if r['current_stock'] < r['min_stock_level'] else "Stoc OK",
                     axis=1
                 )
                 df['expiration_date'] = pd.to_datetime(df['expiration_date']).dt.strftime('%d.%m.%Y')
@@ -122,17 +122,17 @@ if tab_stoc is not None:
                     if st.form_submit_button("Salvează", type="primary"):
                         try:
                             api.update_inventory_stock(prod_map[selected]['id'], new_stock)
-                            st.success("✅ Stoc actualizat!")
+                            st.success("Stoc actualizat!")
                             cache.get_inventory.clear()
                             cache.get_fefo_alerts.clear()
                             import time; time.sleep(1); st.rerun()
                         except Exception as e:
                             if not handle_api_exception(e):
-                                st.error(f"❌ Eroare: {str(e)}")
+                                st.error(f"Eroare: {str(e)}")
 
         except Exception as e:
             if not handle_api_exception(e):
-                st.error(f"❌ Eroare: {str(e)}")
+                st.error(f"Eroare: {str(e)}")
 
 # ============================================================================
 # TAB — Folosește produs (nurse only)
@@ -157,16 +157,16 @@ if tab_foloseste is not None:
                 if st.button("Confirmă utilizarea", type="primary", use_container_width=True):
                     try:
                         api.use_inventory_item(item['id'], int(st.session_state["use_qty"]))
-                        st.success(f"✅ {int(st.session_state['use_qty'])} × **{item['product_name']}** scăzut din stoc.")
+                        st.success(f"{int(st.session_state['use_qty'])} × **{item['product_name']}** scăzut din stoc.")
                         cache.get_inventory.clear()
                         cache.get_fefo_alerts.clear()
                         import time; time.sleep(1); st.rerun()
                     except Exception as e:
                         if not handle_api_exception(e):
-                            st.error(f"❌ {str(e)}")
+                            st.error(f"{str(e)}")
     except Exception as e:
         if not handle_api_exception(e):
-            st.error(f"❌ {str(e)}")
+            st.error(f"{str(e)}")
 
 # ============================================================================
 # TAB 2 — Alerte FEFO
@@ -177,31 +177,29 @@ if tab_alerte is not None:
             fefo_alerts = cache.get_fefo_alerts(api.token)
 
             if not fefo_alerts:
-                st.success("✅ Nu există produse expirate sau aproape de expirare!")
+                st.success("Nu există produse expirate sau aproape de expirare!")
             else:
-                sev_color = {"expired": "🔴", "critical": "🟠", "warning": "🟡"}
                 sev_label = {"expired": "Expirat", "critical": "Critic (≤7 zile)", "warning": "Avertisment (≤30 zile)"}
 
                 c1, c2, c3 = st.columns(3)
-                c1.metric("🔴 Expirate",          len([a for a in fefo_alerts if a['severity'] == 'expired']))
-                c2.metric("🟠 Critice (≤7 zile)",  len([a for a in fefo_alerts if a['severity'] == 'critical']))
-                c3.metric("🟡 Avertisment",        len([a for a in fefo_alerts if a['severity'] == 'warning']))
+                c1.metric("Expirate",          len([a for a in fefo_alerts if a['severity'] == 'expired']))
+                c2.metric("Critice (≤7 zile)",  len([a for a in fefo_alerts if a['severity'] == 'critical']))
+                c3.metric("Avertisment",        len([a for a in fefo_alerts if a['severity'] == 'warning']))
 
                 st.markdown("---")
                 for alert in fefo_alerts:
-                    icon  = sev_color.get(alert['severity'], '⚪')
                     days  = alert['days_until_expiry']
                     exp_d = pd.to_datetime(alert['expiration_date']).strftime('%d.%m.%Y')
                     days_text = f"Expirat de **{abs(days)} zile**" if days < 0 else f"Expiră în **{days} zile**"
 
-                    msg = f"{icon} **{alert['product_name']}** — {days_text} | Expirare: {exp_d} | Stoc: {alert['current_stock']}"
+                    msg = f"**{alert['product_name']}** — {days_text} | Expirare: {exp_d} | Stoc: {alert['current_stock']}"
                     if alert['severity'] == 'expired':    st.error(msg)
                     elif alert['severity'] == 'critical': st.warning(msg)
                     else:                                 st.info(msg)
 
         except Exception as e:
             if not handle_api_exception(e):
-                st.error(f"❌ Eroare: {str(e)}")
+                st.error(f"Eroare: {str(e)}")
 
 # ============================================================================
 # TAB 3 — Adaugă Produs
@@ -233,7 +231,7 @@ if tab_adauga is not None:
                     st.info(f"Departament: **{dept_name}**")
                     selected_dept_id = user_dept_id
                 else:
-                    st.warning("⚠️ Nu ai o secție asociată contului tău.")
+                    st.warning("Nu ai o secție asociată contului tău.")
                     selected_dept_id = None
 
             st.markdown("")
@@ -243,9 +241,9 @@ if tab_adauga is not None:
 
             if submit:
                 if not product_name.strip():
-                    st.error("⚠️ Numele produsului este obligatoriu!")
+                    st.error("Numele produsului este obligatoriu!")
                 elif not selected_dept_id:
-                    st.error("⚠️ Selectează un departament!")
+                    st.error("Selectează un departament!")
                 else:
                     try:
                         api.create_inventory_item(
@@ -257,9 +255,9 @@ if tab_adauga is not None:
                             department_id=selected_dept_id
                         )
                         dept_name = dept_map.get(selected_dept_id, '')
-                        st.success(f"✅ **{product_name}** adăugat în **{dept_name}**!")
+                        st.success(f"**{product_name}** adăugat în **{dept_name}**!")
                         cache.get_inventory.clear()
                         cache.get_fefo_alerts.clear()
                         import time; time.sleep(1); st.rerun()
                     except Exception as e:
-                        st.error(f"❌ Eroare: {str(e)}")
+                        st.error(f"Eroare: {str(e)}")

@@ -222,7 +222,7 @@ def _dashboard_manager():
     # ── Stoc sub minim ────────────────────────────────────────────────────────
     if low_stock:
         st.markdown("---")
-        st.markdown("##### ⚠️ Produse sub stoc minim")
+        st.markdown("##### Produse sub stoc minim")
         df_stock = pd.DataFrame(low_stock)[["product_name", "current_stock", "min_stock_level"]]
         df_stock.columns = ["Produs", "Stoc curent", "Stoc minim"]
         st.dataframe(df_stock, use_container_width=True, hide_index=True)
@@ -269,7 +269,7 @@ def _dashboard_inventory():
 
     # ── Produse sub stoc minim ────────────────────────────────────────────────
     with col_l:
-        st.markdown("##### ⚠️ Produse sub stoc minim")
+        st.markdown("##### Produse sub stoc minim")
         if low_stock:
             df_low = pd.DataFrame(low_stock)[["product_name", "current_stock", "min_stock_level"]]
             df_low["deficit"] = df_low["min_stock_level"] - df_low["current_stock"]
@@ -280,7 +280,7 @@ def _dashboard_inventory():
 
     # ── Alerte FEFO ───────────────────────────────────────────────────────────
     with col_r:
-        st.markdown("##### 🗓️ Alerte expirare (FEFO)")
+        st.markdown("##### Alerte expirare (FEFO)")
         if fefo_alerts:
             df_fefo = pd.DataFrame(fefo_alerts)
             cols = [c for c in ["product_name", "expiration_date", "current_stock"] if c in df_fefo.columns]
@@ -321,7 +321,7 @@ try:
 
 except Exception as e:
     if not handle_api_exception(e):
-        st.error(f"❌ Eroare la încărcarea datelor: {str(e)}")
+        st.error(f"Eroare la încărcarea datelor: {str(e)}")
 
 st.markdown("---")
 col_r1, col_r2 = st.columns([1, 3])

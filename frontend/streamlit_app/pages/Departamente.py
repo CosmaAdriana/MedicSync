@@ -103,6 +103,9 @@ try:
                     else:
                         border_color = "#7f7f7f"
 
+                    _ico_users = '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>'
+                    _ico_check = '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2ca02c" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>'
+                    _ico_alert = '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#d62728" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>'
                     st.markdown(f"""
                     <div style="
                         border-left: 5px solid {border_color};
@@ -117,9 +120,9 @@ try:
                         </p>
                         <hr style="margin: 0.5rem 0;">
                         <div style="display: flex; justify-content: space-between; font-size: 0.9rem;">
-                            <span>👥 Total: <b>{total}</b></span>
-                            <span>✅ Internați: <b>{admitted}</b></span>
-                            <span>🚨 Critici: <b>{critical}</b></span>
+                            <span>{_ico_users} Total: <b>{total}</b></span>
+                            <span>{_ico_check} Internați: <b>{admitted}</b></span>
+                            <span>{_ico_alert} Critici: <b>{critical}</b></span>
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
@@ -162,14 +165,14 @@ try:
 
             if submit:
                 if not name or name.strip() == "":
-                    st.error("⚠️ Numele departamentului este obligatoriu!")
+                    st.error("Numele departamentului este obligatoriu!")
                 else:
                     try:
                         result = api.create_department(
                             name=name.strip(),
                             description=description.strip() if description else None
                         )
-                        st.success(f"✅ Departament **{result['name']}** creat cu succes!")
+                        st.success(f"Departament **{result['name']}** creat cu succes!")
                         st.balloons()
                         cache.get_departments.clear()
                         cache.get_hospital_stats.clear()
@@ -177,9 +180,9 @@ try:
                         st.rerun()
                     except Exception as e:
                         if "409" in str(e) or "există deja" in str(e).lower():
-                            st.error(f"❌ Departamentul '{name}' există deja în sistem!")
+                            st.error(f"Departamentul '{name}' există deja în sistem!")
                         else:
-                            st.error(f"❌ Eroare la crearea departamentului: {str(e)}")
+                            st.error(f"Eroare la crearea departamentului: {str(e)}")
     else:
         st.info(f"Doar managerii pot crea departamente noi. Rolul tău actual: **{ROLE_LABELS.get(user_role, user_role)}**")
 
@@ -201,5 +204,5 @@ try:
 
 except Exception as e:
     if not handle_api_exception(e):
-        st.error(f"❌ Eroare la încărcarea datelor: {str(e)}")
+        st.error(f"Eroare la încărcarea datelor: {str(e)}")
         st.exception(e)

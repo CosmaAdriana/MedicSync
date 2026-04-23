@@ -22,17 +22,24 @@ st.title("Comenzi")
 api       = st.session_state.api_client
 user_role = get_user_role()
 
+_SVG_ICONS = {
+    "draft":     '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>',
+    "placed":    '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>',
+    "processed": '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><circle cx="12" cy="12" r="3"/><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/></svg>',
+    "delivered": '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+    "rejected":  '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>',
+}
 STATUS_LABELS = {
-    "draft":     ("📝", "Ciornă",    "#6c757d"),
-    "placed":    ("📬", "Plasată",   "#0d6efd"),
-    "processed": ("⚙️",  "Aprobată",  "#fd7e14"),
-    "delivered": ("✅", "Livrată",   "#198754"),
-    "rejected":  ("❌", "Respinsă",  "#dc3545"),
+    "draft":     ("", "Ciornă",    "#6c757d"),
+    "placed":    ("", "Plasată",   "#0d6efd"),
+    "processed": ("", "Aprobată",  "#fd7e14"),
+    "delivered": ("", "Livrată",   "#198754"),
+    "rejected":  ("", "Respinsă",  "#dc3545"),
 }
 
 def fmt_status(s):
-    icon, label, _ = STATUS_LABELS.get(s, ("❓", s, "#000"))
-    return f"{icon} {label}"
+    _, label, _ = STATUS_LABELS.get(s, ("", s, "#000"))
+    return label
 
 def refresh_orders():
     cache.get_orders.clear()
@@ -66,19 +73,19 @@ with tab_active:
         if user_role == "manager":
             pending = [o for o in active if o["status"] == "placed"]
             if pending:
-                st.error(f"🔔 **{len(pending)} {'comandă necesită' if len(pending)==1 else 'comenzi necesită'} aprobare!**")
+                st.error(f"**{len(pending)} {'comandă necesită' if len(pending)==1 else 'comenzi necesită'} aprobare!**")
             else:
-                st.success("✅ Nu există comenzi în așteptarea aprobării.")
+                st.success("Nu există comenzi în așteptarea aprobării.")
 
         if not active:
             st.info("Nu există comenzi active în sistem.")
         else:
             for order in active:
-                icon, label, color = STATUS_LABELS.get(order["status"], ("❓", order["status"], "#000"))
+                _, label, color = STATUS_LABELS.get(order["status"], ("", order["status"], "#000"))
+                svg_icon = _SVG_ICONS.get(order["status"], "")
                 created = pd.to_datetime(order["created_at"]).strftime("%d.%m.%Y %H:%M")
 
                 with st.container():
-                    # Header comandă
                     col_info, col_actions = st.columns([3, 2])
 
                     with col_info:
@@ -91,9 +98,9 @@ with tab_active:
                             margin-bottom: 0.3rem;
                         ">
                             <b>Comanda #{order['id']}</b> &nbsp;·&nbsp;
-                            {icon} <b>{label}</b> &nbsp;·&nbsp;
-                            💰 {order['total_amount']:,.2f} RON &nbsp;·&nbsp;
-                            📅 {created}
+                            <span style="color:{color}">{svg_icon} <b>{label}</b></span> &nbsp;·&nbsp;
+                            {order['total_amount']:,.2f} RON &nbsp;·&nbsp;
+                            {created}
                         </div>
                         """, unsafe_allow_html=True)
 
@@ -106,12 +113,12 @@ with tab_active:
                                          use_container_width=True, type="primary"):
                                 try:
                                     api.update_order_status(order["id"], "placed")
-                                    st.success("✅ Comanda a fost plasată și trimisă spre aprobare!")
+                                    st.success("Comanda a fost plasată și trimisă spre aprobare!")
                                     refresh_orders()
                                     st.rerun()
                                 except Exception as e:
                                     if not handle_api_exception(e):
-                                        st.error(f"❌ {str(e)}")
+                                        st.error(f"{str(e)}")
 
                         # inventory_manager: confirmă livrarea
                         elif user_role == "inventory_manager" and s == "processed":
@@ -119,12 +126,12 @@ with tab_active:
                                          use_container_width=True, type="primary"):
                                 try:
                                     api.update_order_status(order["id"], "delivered")
-                                    st.success("✅ Livrare confirmată!")
+                                    st.success("Livrare confirmată!")
                                     refresh_orders()
                                     st.rerun()
                                 except Exception as e:
                                     if not handle_api_exception(e):
-                                        st.error(f"❌ {str(e)}")
+                                        st.error(f"{str(e)}")
 
                         # manager: aprobă sau respinge
                         elif user_role == "manager" and s == "placed":
@@ -134,12 +141,12 @@ with tab_active:
                                              use_container_width=True, type="primary"):
                                     try:
                                         api.update_order_status(order["id"], "processed")
-                                        st.success("✅ Comandă aprobată!")
+                                        st.success("Comandă aprobată!")
                                         refresh_orders()
                                         st.rerun()
                                     except Exception as e:
                                         if not handle_api_exception(e):
-                                            st.error(f"❌ {str(e)}")
+                                            st.error(f"{str(e)}")
                             with c2:
                                 if st.button("Respinge", key=f"reject_{order['id']}",
                                              use_container_width=True):
@@ -150,9 +157,9 @@ with tab_active:
                                         st.rerun()
                                     except Exception as e:
                                         if not handle_api_exception(e):
-                                            st.error(f"❌ {str(e)}")
+                                            st.error(f"{str(e)}")
                         else:
-                            st.caption(f"Status: {icon} {label}")
+                            st.caption(f"Status: {label}")
 
                     # Detalii produse
                     if order.get("items"):
@@ -169,7 +176,7 @@ with tab_active:
 
     except Exception as e:
         if not handle_api_exception(e):
-            st.error(f"❌ Eroare: {str(e)}")
+            st.error(f"Eroare: {str(e)}")
 
 # ============================================================================
 # TAB — Comandă Nouă (inventory_manager only)
@@ -192,7 +199,7 @@ if tab_new is not None:
             inv_price_map = {i["id"]: i.get("unit_price", 0.0) for i in inventory}
 
             if not inventory:
-                st.warning("⚠️ Nu există produse în inventar.")
+                st.warning("Nu există produse în inventar.")
             else:
                 # ── Generare automată comenzi sub stoc minim ─────────────────
                 sub_stoc = [i for i in inventory if i['current_stock'] < i['min_stock_level']]
@@ -216,7 +223,7 @@ if tab_new is not None:
                     with col_info:
                         st.info(f"**{len(sub_stoc)} produse** sunt sub stocul minim și pot fi comandate automat.")
                 else:
-                    st.success("✅ Toate produsele au stoc suficient.")
+                    st.success("Toate produsele au stoc suficient.")
 
                 st.markdown("#### Produse")
 
@@ -268,7 +275,7 @@ if tab_new is not None:
 
                     with c4:
                         if len(st.session_state.order_rows) > 1:
-                            if st.button("🗑️", key=f"del_{gen_v}_{idx}", help="Șterge rând"):
+                            if st.button("×", key=f"del_{gen_v}_{idx}", help="Șterge rând"):
                                 rows_to_delete.append(idx)
 
                 for idx in reversed(rows_to_delete):
@@ -285,7 +292,7 @@ if tab_new is not None:
                 ba, bb, _, bc = st.columns([1, 1, 2, 1.5])
 
                 with ba:
-                    if st.button("➕ Adaugă produs", use_container_width=True):
+                    if st.button("+ Adaugă produs", use_container_width=True):
                         st.session_state.order_rows.append({"inv_id": None, "qty": 1, "price": 0.0})
                         st.rerun()
 
@@ -297,9 +304,9 @@ if tab_new is not None:
                                  type="primary", key="create_order"):
                         rows = st.session_state.order_rows
                         if not rows or any(r["inv_id"] is None for r in rows):
-                            st.error("⚠️ Completează toate produsele!")
+                            st.error("Completează toate produsele!")
                         elif any(inv_price_map.get(r["inv_id"], r["price"]) <= 0 for r in rows):
-                            st.error("⚠️ Prețul trebuie să fie mai mare ca 0!")
+                            st.error("Prețul trebuie să fie mai mare ca 0!")
                         else:
                             try:
                                 items = [
@@ -310,17 +317,17 @@ if tab_new is not None:
                                 ]
                                 order = api.create_order(items)
                                 api.update_order_status(order["id"], "placed")
-                                st.success(f"✅ Comanda #{order['id']} a fost creată și plasată spre aprobare!")
+                                st.success(f"Comanda #{order['id']} a fost creată și plasată spre aprobare!")
                                 st.session_state.order_rows = [{"inv_id": None, "qty": 1, "price": 0.0}]
                                 refresh_orders()
                                 import time; time.sleep(1); st.rerun()
                             except Exception as e:
                                 if not handle_api_exception(e):
-                                    st.error(f"❌ Eroare: {str(e)}")
+                                    st.error(f"Eroare: {str(e)}")
 
         except Exception as e:
             if not handle_api_exception(e):
-                st.error(f"❌ Eroare la încărcarea inventarului: {str(e)}")
+                st.error(f"Eroare la încărcarea inventarului: {str(e)}")
 
 # ============================================================================
 # TAB — Istoric
@@ -355,4 +362,4 @@ with tab_history:
 
     except Exception as e:
         if not handle_api_exception(e):
-            st.error(f"❌ Eroare: {str(e)}")
+            st.error(f"Eroare: {str(e)}")

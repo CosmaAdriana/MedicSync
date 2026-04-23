@@ -144,7 +144,7 @@ def landing_page():
             padding: 6vh 0 3vh 0;
         ">
             <div style="font-size: 3.8rem; font-weight: 800; letter-spacing: -1px; margin-bottom: 0.3rem;">
-                🏥 MedicSync
+                <svg xmlns="http://www.w3.org/2000/svg" width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-6px;margin-right:10px"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>MedicSync
             </div>
             <div style="font-size: 1.35rem; opacity: 0.92; margin-bottom: 1rem;">
                 Health 4.0 — Platforma Inteligentă pentru Spitale
@@ -161,14 +161,18 @@ def landing_page():
 
     # ── Feature cards ─────────────────────────────────────────────────────────
     _, c1, c2, c3, c4, _ = st.columns([0.4, 1, 1, 1, 1, 0.4])
+    _fi_user  = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>'
+    _fi_bot   = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>'
+    _fi_pkg   = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>'
+    _fi_link  = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>'
     features = [
-        (c1, "👤", "Gestionare Pacienți",
+        (c1, _fi_user, "Gestionare Pacienți",
          "Monitorizare completă, semne vitale și alerte clinice în timp real."),
-        (c2, "🤖", "Predicții ML",
+        (c2, _fi_bot,  "Predicții ML",
          "Algoritmi AI pentru necesarul de personal și stocurile de siguranță."),
-        (c3, "📦", "Inventar FEFO",
+        (c3, _fi_pkg,  "Inventar FEFO",
          "Control automat al stocurilor cu alerte de expirare și reaprovizionare."),
-        (c4, "🔗", "HL7 FHIR R4",
+        (c4, _fi_link, "HL7 FHIR R4",
          "Interoperabilitate cu orice sistem medical prin standarde internaționale."),
     ]
     for col, icon, title, desc in features:
@@ -185,11 +189,11 @@ def landing_page():
     # ── CTA Buttons ───────────────────────────────────────────────────────────
     _, b1, _, b2, _ = st.columns([2.2, 1.1, 0.25, 1.1, 2.2])
     with b1:
-        if st.button("🔐  Autentificare", use_container_width=True, type="primary", key="btn_go_login"):
+        if st.button("Autentificare", use_container_width=True, type="primary", key="btn_go_login"):
             st.session_state.auth_view = "login"
             st.rerun()
     with b2:
-        if st.button("📝  Înregistrare", use_container_width=True, key="btn_go_register"):
+        if st.button("Înregistrare", use_container_width=True, key="btn_go_register"):
             st.session_state.auth_view = "register"
             st.rerun()
 
@@ -212,7 +216,7 @@ def login_page():
     _, col, _ = st.columns([1, 1.3, 1])
     with col:
         if st.session_state.get("session_expired"):
-            st.warning("⏳ Sesiunea ta a expirat. Te rugăm să te autentifici din nou.")
+            st.warning("Sesiunea ta a expirat. Te rugăm să te autentifici din nou.")
             st.session_state.session_expired = False
 
         st.markdown("""
@@ -221,7 +225,7 @@ def login_page():
                 text-shadow: 0 1px 8px rgba(0,0,0,0.7);
                 margin-bottom: 1.2rem;
             ">
-                <div style="font-size: 1.9rem; font-weight: 700;">🔐 Autentificare</div>
+                <div style="font-size: 1.9rem; font-weight: 700;">Autentificare</div>
                 <div style="font-size: 0.95rem; opacity: 0.78; margin-top: 0.3rem;">
                     Intră în contul tău MedicSync
                 </div>
@@ -235,13 +239,13 @@ def login_page():
 
             col_btn1, col_btn2 = st.columns(2)
             with col_btn1:
-                submit = st.form_submit_button("🚀 Conectare", use_container_width=True, type="primary")
+                submit = st.form_submit_button("Conectare", use_container_width=True, type="primary")
             with col_btn2:
-                back = st.form_submit_button("◀️ Înapoi", use_container_width=True)
+                back = st.form_submit_button("Înapoi", use_container_width=True)
 
             if submit:
                 if not email or not password:
-                    st.error("⚠️ Completează email și parola!")
+                    st.error("Completează email și parola!")
                 else:
                     try:
                         import cache as _cache
@@ -257,11 +261,11 @@ def login_page():
                         st.rerun()
                     except requests.exceptions.HTTPError as e:
                         if e.response.status_code == 401:
-                            st.error("❌ Email sau parolă incorectă!")
+                            st.error("Email sau parolă incorectă!")
                         else:
-                            st.error(f"❌ Eroare: {str(e)}")
+                            st.error(f"Eroare: {str(e)}")
                     except Exception as e:
-                        st.error(f"❌ Eroare: {str(e)}")
+                        st.error(f"Eroare: {str(e)}")
 
             if back:
                 st.session_state.auth_view = "landing"
@@ -290,7 +294,7 @@ def register_page():
                 text-shadow: 0 1px 8px rgba(0,0,0,0.7);
                 margin-bottom: 1.2rem;
             ">
-                <div style="font-size: 1.9rem; font-weight: 700;">📝 Înregistrare</div>
+                <div style="font-size: 1.9rem; font-weight: 700;">Înregistrare</div>
                 <div style="font-size: 0.95rem; opacity: 0.78; margin-top: 0.3rem;">
                     Creează un cont nou în MedicSync
                 </div>
@@ -301,10 +305,10 @@ def register_page():
             "Rol",
             options=["nurse", "doctor", "manager", "inventory_manager"],
             format_func=lambda x: {
-                "nurse": "👨‍⚕️ Asistent Medical",
-                "doctor": "🩺 Doctor",
-                "manager": "👔 Manager",
-                "inventory_manager": "📦 Manager Inventar"
+                "nurse": "Asistent Medical",
+                "doctor": "Doctor",
+                "manager": "Manager",
+                "inventory_manager": "Manager Inventar"
             }[x],
             key="register_role"
         )
@@ -323,7 +327,7 @@ def register_page():
                     )
                     dept_id = dept_map[dept_select]
             except Exception:
-                st.warning("⚠️ Nu s-au putut încărca departamentele.")
+                st.warning("Nu s-au putut încărca departamentele.")
 
         with st.form("register_form"):
             full_name = st.text_input("Nume Complet", placeholder="Dr. Ion Popescu")
@@ -335,24 +339,24 @@ def register_page():
 
             col1, col2 = st.columns(2)
             with col1:
-                submit = st.form_submit_button("✅ Înregistrare", use_container_width=True, type="primary")
+                submit = st.form_submit_button("Înregistrare", use_container_width=True, type="primary")
             with col2:
-                back = st.form_submit_button("◀️ Înapoi", use_container_width=True)
+                back = st.form_submit_button("Înapoi", use_container_width=True)
 
             if submit:
                 if not all([full_name, email, password, password_confirm]):
-                    st.error("⚠️ Completează toate câmpurile!")
+                    st.error("Completează toate câmpurile!")
                 elif password != password_confirm:
-                    st.error("❌ Parolele nu se potrivesc!")
+                    st.error("Parolele nu se potrivesc!")
                 elif len(password) < 6:
-                    st.error("❌ Parola trebuie să aibă minim 6 caractere!")
+                    st.error("Parola trebuie să aibă minim 6 caractere!")
                 elif role in ("nurse", "doctor") and not dept_id:
-                    st.error("⚠️ Selectează o secție!")
+                    st.error("Selectează o secție!")
                 else:
                     try:
                         api_client = st.session_state.api_client
                         result = api_client.register(full_name, email, password, role, dept_id)
-                        st.success(f"✅ Cont creat cu succes pentru {result['full_name']}!")
+                        st.success(f"Cont creat cu succes pentru {result['full_name']}!")
                         api_client.login(email, password)
                         user = api_client.get_current_user()
                         st.session_state.authenticated = True
@@ -362,11 +366,11 @@ def register_page():
                         st.rerun()
                     except requests.exceptions.HTTPError as e:
                         if e.response.status_code == 409:
-                            st.error("❌ Email-ul este deja înregistrat!")
+                            st.error("Email-ul este deja înregistrat!")
                         else:
-                            st.error(f"❌ Eroare la înregistrare: {str(e)}")
+                            st.error(f"Eroare la înregistrare: {str(e)}")
                     except Exception as e:
-                        st.error(f"❌ Eroare: {str(e)}")
+                        st.error(f"Eroare: {str(e)}")
 
             if back:
                 st.session_state.auth_view = "landing"
@@ -444,7 +448,7 @@ def require_auth(allowed_roles: list = None):
                     margin: 2rem auto;
                     max-width: 600px;
                 ">
-                    <div style="font-size: 4rem; margin-bottom: 1rem;">🔒</div>
+                    <div style="margin-bottom: 1rem;"><svg xmlns="http://www.w3.org/2000/svg" width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#6c757d" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
                     <h2 style="color: #495057; margin-bottom: 0.5rem;">Secțiune restricționată</h2>
                     <p style="color: #6c757d; font-size: 1.1rem; margin-bottom: 1.5rem;">
                         Această secțiune nu este disponibilă pentru rolul tău.
