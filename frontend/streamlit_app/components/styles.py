@@ -5,16 +5,12 @@ import streamlit as st
 
 
 def inject_global_css():
-    st.markdown(
-        '<link rel="preconnect" href="https://fonts.googleapis.com">'
-        '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">',
-        unsafe_allow_html=True,
-    )
     st.markdown("""<style>
 
-    /* ── Font ─────────────────────────────────────────────────────────── */
+    /* ── Font — sistem local, fără request extern ─────────────────────── */
     html, body, [class*="css"] {
-        font-family: 'Inter', sans-serif !important;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
+                     sans-serif !important;
     }
 
     /* ── Page title ───────────────────────────────────────────────────── */
@@ -146,6 +142,8 @@ def inject_global_css():
     /* ── Hide Streamlit branding ──────────────────────────────────────── */
     #MainMenu { visibility: hidden; }
     footer    { visibility: hidden; }
-    header    { visibility: hidden; }
+    [data-testid="stHeader"] { background: transparent !important; }
+    [data-testid="stToolbar"] { visibility: hidden !important; }
+    [data-testid="stDecoration"] { display: none !important; }
 
     </style>""", unsafe_allow_html=True)

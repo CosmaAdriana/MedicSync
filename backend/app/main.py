@@ -10,7 +10,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .database import Base, engine
-from .routers import auth, patients, vitals, inventory, orders, shifts, predictions, fhir, departments, schedule
+from .routers import auth, patients, vitals, inventory, orders, shifts, predictions, fhir, departments, schedule, notifications
 
 load_dotenv()
 
@@ -52,6 +52,7 @@ app.include_router(shifts.router)
 app.include_router(predictions.router)
 app.include_router(fhir.router)
 app.include_router(schedule.router)
+app.include_router(notifications.router)
 
 
 @app.get("/ping")

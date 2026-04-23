@@ -242,6 +242,12 @@ class APIClient:
         """Get safety stock predictions for inventory."""
         return self.get("/predict/inventory", params={"lead_time_std": lead_time_std})
 
+    # ========== Notifications ==========
+
+    def get_notifications_summary(self) -> Dict:
+        """Returnează contoare pentru badge-urile din sidebar."""
+        return self.get("/notifications/summary")
+
     # ========== Orders ==========
 
     def get_orders(self) -> list:
