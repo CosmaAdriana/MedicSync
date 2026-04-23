@@ -115,79 +115,32 @@ def landing_page():
     """Pagina de start cu background, info platformă și butoane login/register."""
     _inject_background()
 
-    st.markdown("""
-        <style>
-        .feature-card {
-            background: rgba(255, 255, 255, 0.12);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.22);
-            border-radius: 16px;
-            padding: 1.4rem 1rem;
-            text-align: center;
-            color: white;
-            text-shadow: 0 1px 4px rgba(0,0,0,0.5);
-            height: 100%;
+    # Gradient overlay mai fin peste cel plat din _inject_background
+    st.markdown("""<style>
+        [data-testid="stAppViewContainer"]::before {
+            background: linear-gradient(
+                180deg,
+                rgba(5, 15, 35, 0.92) 0%,
+                rgba(5, 15, 35, 0.68) 40%,
+                rgba(5, 15, 35, 0.62) 68%,
+                rgba(5, 15, 35, 0.88) 100%
+            ) !important;
         }
-        .feature-card .fi { font-size: 2rem; margin-bottom: 0.5rem; }
-        .feature-card h4 { font-size: 0.95rem; font-weight: 700; margin: 0 0 0.4rem 0; }
-        .feature-card p  { font-size: 0.82rem; opacity: 0.85; margin: 0; line-height: 1.5; }
-        </style>
-    """, unsafe_allow_html=True)
+    </style>""", unsafe_allow_html=True)
 
-    # ── Hero ─────────────────────────────────────────────────────────────────
-    st.markdown("""
-        <div style="
-            text-align: center;
-            color: white;
-            text-shadow: 0 2px 14px rgba(0,0,0,0.85);
-            padding: 6vh 0 3vh 0;
-        ">
-            <div style="font-size: 3.8rem; font-weight: 800; letter-spacing: -1px; margin-bottom: 0.3rem;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-6px;margin-right:10px"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>MedicSync
-            </div>
-            <div style="font-size: 1.35rem; opacity: 0.92; margin-bottom: 1rem;">
-                Health 4.0 — Platforma Inteligentă pentru Spitale
-            </div>
-            <div style="
-                font-size: 1rem; opacity: 0.75;
-                max-width: 580px; margin: 0 auto 2.5rem auto; line-height: 1.7;
-            ">
-                Gestionează pacienții, inventarul și personalul medical dintr-un singur loc.<br>
-                Decizii mai bune, mai rapid — cu ajutorul inteligenței artificiale.
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
+    # ── Hero — wordmark ──────────────────────────────────────────────────────
+    st.markdown("""<div style="text-align:center;padding-top:7vh;font-family:'Inter',system-ui,sans-serif;">
+<div style="margin-bottom:2.2rem;display:inline-block;"><svg width="228" height="54" viewBox="0 0 228 54" xmlns="http://www.w3.org/2000/svg"><rect width="54" height="54" rx="13" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.2)" stroke-width="1"/><polyline points="7,27 15,27 19,14 27,40 32,19 37,27 47,27" fill="none" stroke="white" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/><text y="38" font-family="Inter,system-ui,sans-serif" font-size="28"><tspan x="66" font-weight="800" fill="white" letter-spacing="-0.5">Medic</tspan><tspan font-weight="400" fill="rgba(255,255,255,0.46)" letter-spacing="-0.2">Sync</tspan></text></svg>
+<p style="font-size:0.62rem;letter-spacing:4px;text-transform:uppercase;color:rgba(255,255,255,0.24);margin:6px 0 0;font-weight:500;">Health 4.0</p></div></div>""", unsafe_allow_html=True)
 
-    # ── Feature cards ─────────────────────────────────────────────────────────
-    _, c1, c2, c3, c4, _ = st.columns([0.4, 1, 1, 1, 1, 0.4])
-    _fi_user  = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>'
-    _fi_bot   = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>'
-    _fi_pkg   = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>'
-    _fi_link  = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>'
-    features = [
-        (c1, _fi_user, "Gestionare Pacienți",
-         "Monitorizare completă, semne vitale și alerte clinice în timp real."),
-        (c2, _fi_bot,  "Predicții ML",
-         "Algoritmi AI pentru necesarul de personal și stocurile de siguranță."),
-        (c3, _fi_pkg,  "Inventar FEFO",
-         "Control automat al stocurilor cu alerte de expirare și reaprovizionare."),
-        (c4, _fi_link, "HL7 FHIR R4",
-         "Interoperabilitate cu orice sistem medical prin standarde internaționale."),
-    ]
-    for col, icon, title, desc in features:
-        col.markdown(f"""
-            <div class="feature-card">
-                <div class="fi">{icon}</div>
-                <h4>{title}</h4>
-                <p>{desc}</p>
-            </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown("<br>", unsafe_allow_html=True)
+    # ── Hero — tagline + descriere ────────────────────────────────────────────
+    st.markdown("""<div style="text-align:center;padding:0 1rem 3rem;font-family:'Inter',system-ui,sans-serif;">
+<h1 style="font-size:3.6rem;font-weight:800;color:white;letter-spacing:-2px;line-height:1.08;margin:0 0 1.2rem;">Spitalul tău,<br>digitalizat complet.</h1>
+<p style="font-size:1.05rem;color:rgba(255,255,255,0.55);max-width:500px;margin:0 auto 0.5rem;line-height:1.8;">Pacienți, inventar și personal medical — dintr-un singur loc.<br>Predicții AI, alerte în timp real și standarde HL7 FHIR R4.</p>
+</div>""", unsafe_allow_html=True)
 
     # ── CTA Buttons ───────────────────────────────────────────────────────────
-    _, b1, _, b2, _ = st.columns([2.2, 1.1, 0.25, 1.1, 2.2])
+    _, b1, _, b2, _ = st.columns([2.5, 1, 0.2, 1, 2.5])
     with b1:
         if st.button("Autentificare", use_container_width=True, type="primary", key="btn_go_login"):
             st.session_state.auth_view = "login"
@@ -197,12 +150,68 @@ def landing_page():
             st.session_state.auth_view = "register"
             st.rerun()
 
+    st.markdown("<div style='height:2.8rem'></div>", unsafe_allow_html=True)
+
+    # ── Feature cards ─────────────────────────────────────────────────────────
+    _S = 'xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4a9db3" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"'
+    _fi_user = f'<svg {_S}><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>'
+    _fi_bot  = f'<svg {_S}><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>'
+    _fi_pkg  = f'<svg {_S}><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>'
+    _fi_link = f'<svg {_S}><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>'
+
+    features = [
+        (_fi_user, "Gestionare Pacienți",
+         "Monitorizare completă cu semne vitale, alerte clinice automate și actualizare status în timp real."),
+        (_fi_bot,  "Predicții ML",
+         "RandomForest pentru necesarul de personal și stocuri — predicții pe 7 și 30 de zile."),
+        (_fi_pkg,  "Inventar FEFO",
+         "Alerte de expirare, reaprovizionare automată la livrare și consum monitorizat per secție."),
+        (_fi_link, "HL7 FHIR R4",
+         "Export nativ pentru interoperabilitate cu orice sistem medical sau platformă națională."),
+    ]
+
+    _, c1, c2, c3, c4, _ = st.columns([0.35, 1, 1, 1, 1, 0.35])
+    for col, (icon, title, desc) in zip([c1, c2, c3, c4], features):
+        col.markdown(f"""
+        <div style="
+            background: rgba(5, 15, 35, 0.52);
+            backdrop-filter: blur(20px) saturate(150%);
+            -webkit-backdrop-filter: blur(20px) saturate(150%);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-top: 2px solid #4a9db3;
+            border-radius: 16px;
+            padding: 1.5rem 1.1rem 1.4rem;
+            text-align: center;
+            height: 100%;
+            font-family: 'Inter', system-ui, sans-serif;
+        ">
+            <div style="margin-bottom: 0.85rem; opacity: 0.85;">{icon}</div>
+            <h4 style="
+                color: white;
+                font-size: 0.88rem;
+                font-weight: 700;
+                margin: 0 0 0.5rem;
+                letter-spacing: -0.2px;
+            ">{title}</h4>
+            <p style="
+                color: rgba(255,255,255,0.46);
+                font-size: 0.80rem;
+                line-height: 1.65;
+                margin: 0;
+            ">{desc}</p>
+        </div>
+        """, unsafe_allow_html=True)
+
     # ── Footer ────────────────────────────────────────────────────────────────
     st.markdown("""
         <p style="
-            position: fixed; bottom: 12px; right: 16px;
-            color: rgba(255,255,255,0.4); font-size: 0.75rem; z-index: 999;
-        ">🏥 MedicSync © 2026</p>
+            position: fixed; bottom: 14px; right: 18px;
+            color: rgba(255,255,255,0.22);
+            font-size: 0.72rem;
+            font-weight: 500;
+            letter-spacing: 0.05em;
+            z-index: 999;
+        ">MedicSync &copy; 2026</p>
     """, unsafe_allow_html=True)
 
 
