@@ -30,14 +30,11 @@ def notifications_summary(
     """
     role = current_user.role.value
 
-    # Alerte critice nerezolvate
+    # Toate alertele nerezolvate
     alerts_q = (
         db.query(func.count(ClinicalAlert.id))
         .join(Patient, ClinicalAlert.patient_id == Patient.id)
-        .filter(
-            ClinicalAlert.is_resolved == False,
-            ClinicalAlert.risk_level == RiskLevelEnum.critical,
-        )
+        .filter(ClinicalAlert.is_resolved == False)
     )
     if role in ("nurse", "doctor") and current_user.department_id:
         alerts_q = alerts_q.filter(Patient.department_id == current_user.department_id)

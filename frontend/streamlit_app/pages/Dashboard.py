@@ -75,7 +75,7 @@ def _dashboard_nurse_doctor():
     # Alerte critice nerezolvate (din notifications summary)
     critical_alerts = 0
     try:
-        notif = api.get_notifications_summary()
+        notif = cache.get_notifications_summary(api.token)
         critical_alerts = notif.get("critical_alerts", 0)
     except Exception:
         pass
@@ -88,7 +88,7 @@ def _dashboard_nurse_doctor():
     c1, c2, c3 = st.columns(3)
     with c1: kpi_card("Pacienți activi",        str(len(active)),      f"în {dept_name}", "green")
     with c2: kpi_card("Critici",                str(len(critical_p)),  "necesită atenție", "red")
-    with c3: kpi_card("Alerte clinice critice", str(critical_alerts),  "nerezolvate",
+    with c3: kpi_card("Alerte clinice", str(critical_alerts), "nerezolvate",
                       "red" if critical_alerts else "green")
 
     st.markdown("---")

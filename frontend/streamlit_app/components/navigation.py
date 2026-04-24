@@ -125,7 +125,8 @@ def _nav_links(visible_pages):
 
     if api_client and getattr(api_client, "token", None):
         try:
-            counts.update(api_client.get_notifications_summary())
+            from cache import get_notifications_summary
+            counts.update(get_notifications_summary(api_client.token))
         except Exception:
             pass
 
@@ -146,9 +147,9 @@ def _nav_links(visible_pages):
 PAGES = [
     {"path": "app.py",                   "label": "Acasă",          "roles": None},
     {"path": "pages/Dashboard.py",       "label": "Dashboard",      "roles": None},
-    {"path": "pages/Departamente.py",    "label": "Departamente",   "roles": None},
+    {"path": "pages/Departamente.py",    "label": "Departamente",   "roles": ["manager", "doctor", "inventory_manager"]},
     {"path": "pages/Pacienți.py",        "label": "Pacienți",       "roles": ["doctor", "nurse", "manager"]},
-    {"path": "pages/Semne_Vitale.py",    "label": "Semne Vitale",   "roles": ["nurse", "doctor", "manager"]},
+    {"path": "pages/Semne_Vitale.py",    "label": "Semne Vitale",   "roles": ["nurse", "doctor"]},
     {"path": "pages/Inventar.py",        "label": "Inventar",       "roles": ["manager", "inventory_manager", "nurse"]},
     {"path": "pages/Comenzi.py",         "label": "Comenzi",        "roles": ["manager", "inventory_manager"]},
     {"path": "pages/Predicții_Stoc.py",  "label": "Predicții Stoc", "roles": ["manager", "inventory_manager"]},

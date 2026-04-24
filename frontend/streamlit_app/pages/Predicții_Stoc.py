@@ -10,6 +10,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from auth import require_auth, handle_api_exception
 from components.navigation import render_top_nav
+import cache
 import pandas as pd
 import plotly.express as px
 from components.chart_theme import apply as ct, bars as ct_bars, TEAL, SLATE_400, AMBER
@@ -25,7 +26,7 @@ st.caption("Recomandări de comandă bazate pe consumul real din ultimele 30 de 
 api = st.session_state.api_client
 
 try:
-    stats = api.get_consumption_stats()
+    stats = cache.get_consumption_stats(api.token)
 except Exception as e:
     if not handle_api_exception(e):
         st.error(f"Eroare la încărcarea datelor: {str(e)}")

@@ -41,7 +41,7 @@ def record_vitals(
 
     alert = analyze_vitals(vital_sign, db)
 
-    if alert and alert.risk_level.value == "critical":
+    if alert:
         patient.status = PatientStatusEnum.critical
         db.commit()
         db.refresh(patient)

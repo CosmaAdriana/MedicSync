@@ -18,6 +18,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from auth import require_auth, get_user_role, handle_api_exception
 from components.navigation import render_top_nav
+import cache
 
 st.set_page_config(page_title="Grafic Lunar", page_icon="📅", layout="wide",
                    initial_sidebar_state="auto")
@@ -172,7 +173,7 @@ def _nurse_schedule_view(api):
                                value=next_year, step=1, key="nurse_year_sel")
 
     try:
-        saved = api.get_monthly_schedule(dept_id, int(year), month)
+        saved = cache.get_monthly_schedule(api.token, dept_id, int(year), month)
         sched_data = json.loads(saved["schedule_data"])
         nurse_sched = sched_data.get("schedule", {}).get(nurse_id, {})
 
@@ -260,17 +261,27 @@ def _nurse_schedule_view(api):
 def nurse_view(api):
     st.markdown("## Grafic Lunar — Cereri")
 
-    # ── Sold concediu ────────────────────────────────────────────────────────
+    # ── Sold concediu + cereri — încărcate în paralel ─────────────────────────
+    today_year = date.today().year
     try:
-        balance = api.get_vacation_balance(year=date.today().year)
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Zile totale / an", balance["total_days"])
-        c2.metric("Zile utilizate", balance["used_days"])
-        c3.metric("Zile rămase", balance["remaining_days"],
-                  delta=None,
-                  help="Zile de concediu disponibile pentru anul curent")
+        _parallel = cache.fetch_parallel(
+            balance  = (cache.get_vacation_balance,  api.token, today_year),
+            requests = (cache.get_vacation_requests, api.token),
+        )
+        balance           = _parallel["balance"]
+        _prefetched_reqs  = _parallel["requests"]
     except Exception as e:
         handle_api_exception(e)
+        balance          = {}
+        _prefetched_reqs = []
+
+    if balance:
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Zile totale / an", balance.get("total_days", "—"))
+        c2.metric("Zile utilizate",   balance.get("used_days", "—"))
+        c3.metric("Zile rămase",      balance.get("remaining_days", "—"),
+                  delta=None, help="Zile de concediu disponibile pentru anul curent")
+    else:
         st.warning("Nu s-a putut încărca soldul de concediu.")
 
     _nurse_schedule_view(api)
@@ -312,6 +323,9 @@ def nurse_view(api):
                             notes=notes or None,
                         )
                         st.success("Cererea a fost trimisă cu succes!")
+                        cache.get_vacation_balance.clear()
+                        cache.get_vacation_requests.clear()
+                        cache.get_notifications_summary.clear()
                         st.rerun()
                     except Exception as e:
                         if not handle_api_exception(e):
@@ -326,7 +340,7 @@ def nurse_view(api):
     # ── Lista cereri proprii ─────────────────────────────────────────────────
     st.markdown("### Cererile mele")
     try:
-        requests = api.get_vacation_requests()
+        requests = cache.get_vacation_requests(api.token)
         if not requests:
             st.info("Nu ai nicio cerere depusă.")
         else:
@@ -375,7 +389,7 @@ def manager_view(api):
     col_dept, col_month, col_year = st.columns([2, 1, 1])
 
     try:
-        departments = api.get_departments()
+        departments = cache.get_departments(api.token)
         dept_map = {d["name"]: d["id"] for d in departments}
     except Exception:
         departments = []
@@ -638,7 +652,7 @@ def _show_schedule_stats(sched: dict, year: int, month: int):
 def _manager_requests(api, dept_id: int):
     """Afișează cererile în așteptare pentru manager."""
     try:
-        requests = api.get_vacation_requests(department_id=dept_id)
+        requests = cache.get_vacation_requests(api.token, department_id=dept_id)
         pending = [r for r in requests if r["status"] == "pending"]
         if not pending:
             st.info("Nu există cereri în așteptare.")
@@ -658,12 +672,16 @@ def _manager_requests(api, dept_id: int):
             if col_app.button("Aprobă", key=f"app_{req['id']}", use_container_width=True, type="primary"):
                 try:
                     api.review_vacation_request(req["id"], "approved")
+                    cache.get_vacation_requests.clear()
+                    cache.get_notifications_summary.clear()
                     st.rerun()
                 except Exception as e:
                     handle_api_exception(e)
             if col_rej.button("Respinge", key=f"rej_{req['id']}", use_container_width=True):
                 try:
                     api.review_vacation_request(req["id"], "rejected")
+                    cache.get_vacation_requests.clear()
+                    cache.get_notifications_summary.clear()
                     st.rerun()
                 except Exception as e:
                     handle_api_exception(e)

@@ -23,6 +23,12 @@ st.title("Pacienți")
 api = st.session_state.api_client
 user_role = get_user_role()
 
+STATUS_RO = {
+    "admitted":  "Internat",
+    "critical":  "Critic",
+    "discharged": "Externat",
+}
+
 # ============================================================================
 # Top-level Tabs
 # ============================================================================
@@ -184,7 +190,6 @@ with tab_interneaza:
                     st.balloons()
                     cache.get_patients.clear()
                     cache.get_hospital_stats.clear()
-                    import time; time.sleep(2)
                     st.rerun()
                 except Exception as e:
                     if not handle_api_exception(e):
@@ -225,7 +230,7 @@ with tab_externeaza:
                 st.warning("Nu există pacienți activi (internați sau critici) în sistem.")
             else:
                 patient_options = {
-                    f"{p['full_name']} (ID: {p['id']}) — {p['status'].upper()}": p
+                    f"{p['full_name']} (ID: {p['id']}) — {STATUS_RO.get(p['status'], p['status'])}": p
                     for p in active_patients
                 }
 
@@ -249,7 +254,7 @@ with tab_externeaza:
                     | **Nume** | {selected['full_name']} |
                     | **Departament** | {dept_name} |
                     | **Data Internare** | {adm_date} |
-                    | **Status Curent** | {selected['status'].upper()} |
+                    | **Status Curent** | {STATUS_RO.get(selected['status'], selected['status'])} |
                     """)
 
                 with col_action:
@@ -285,10 +290,9 @@ with tab_externeaza:
                             st.success(f"Pacientul **{result['full_name']}** a fost externat cu succes!")
                             st.balloons()
                         else:
-                            st.success(f"Statusul pacientului **{result['full_name']}** a fost actualizat la **{new_status}**!")
+                            st.success(f"Statusul pacientului **{result['full_name']}** a fost actualizat la **{STATUS_RO.get(new_status, new_status)}**!")
                         cache.get_patients.clear()
                         cache.get_hospital_stats.clear()
-                        import time; time.sleep(2)
                         st.rerun()
                     except Exception as e:
                         if not handle_api_exception(e):

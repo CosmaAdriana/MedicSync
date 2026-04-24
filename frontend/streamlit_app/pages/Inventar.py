@@ -26,20 +26,18 @@ user = st.session_state.user
 user_dept_id = user.get("department_id")
 
 try:
-    data = cache.fetch_parallel(
-        departments  = (cache.get_departments, api.token),
-        inventory    = (cache.get_inventory,   api.token),
-        fefo_alerts  = (cache.get_fefo_alerts, api.token),
-    )
-    departments  = data["departments"]
-    dept_map     = {d['id']: d['name'] for d in departments}
-    dept_id_map  = {d['name']: d['id'] for d in departments}
-    _inv_prefetch  = data["inventory"]    # deja în cache, tab-urile îl citesc instant
-    _fefo_prefetch = data["fefo_alerts"]  # idem
+    _parallel = {"departments": (cache.get_departments, api.token),
+                 "inventory":   (cache.get_inventory,   api.token)}
+    if user_role != "nurse":
+        _parallel["fefo_alerts"] = (cache.get_fefo_alerts, api.token)
+    data = cache.fetch_parallel(**_parallel)
+    departments = data["departments"]
+    dept_map    = {d['id']: d['name'] for d in departments}
+    dept_id_map = {d['name']: d['id'] for d in departments}
 except Exception:
-    departments  = []
-    dept_map     = {}
-    dept_id_map  = {}
+    departments = []
+    dept_map    = {}
+    dept_id_map = {}
 
 if user_role == "nurse":
     tab_stoc = None
@@ -125,7 +123,7 @@ if tab_stoc is not None:
                             st.success("Stoc actualizat!")
                             cache.get_inventory.clear()
                             cache.get_fefo_alerts.clear()
-                            import time; time.sleep(1); st.rerun()
+                            st.rerun()
                         except Exception as e:
                             if not handle_api_exception(e):
                                 st.error(f"Eroare: {str(e)}")
@@ -160,7 +158,8 @@ if tab_foloseste is not None:
                         st.success(f"{int(st.session_state['use_qty'])} × **{item['product_name']}** scăzut din stoc.")
                         cache.get_inventory.clear()
                         cache.get_fefo_alerts.clear()
-                        import time; time.sleep(1); st.rerun()
+                        cache.get_consumption_stats.clear()
+                        st.rerun()
                     except Exception as e:
                         if not handle_api_exception(e):
                             st.error(f"{str(e)}")
@@ -258,6 +257,6 @@ if tab_adauga is not None:
                         st.success(f"**{product_name}** adăugat în **{dept_name}**!")
                         cache.get_inventory.clear()
                         cache.get_fefo_alerts.clear()
-                        import time; time.sleep(1); st.rerun()
+                        st.rerun()
                     except Exception as e:
                         st.error(f"Eroare: {str(e)}")

@@ -220,65 +220,69 @@ def login_page():
     _inject_background()
     _inject_form_glass_styles()
 
-    st.markdown("<div style='height: 7vh'></div>", unsafe_allow_html=True)
+    main = st.empty()
 
-    _, col, _ = st.columns([1, 1.3, 1])
-    with col:
-        if st.session_state.get("session_expired"):
-            st.warning("Sesiunea ta a expirat. Te rugăm să te autentifici din nou.")
-            st.session_state.session_expired = False
+    with main.container():
+        st.markdown("<div style='height: 7vh'></div>", unsafe_allow_html=True)
 
-        st.markdown("""
-            <div style="
-                text-align: center; color: white;
-                text-shadow: 0 1px 8px rgba(0,0,0,0.7);
-                margin-bottom: 1.2rem;
-            ">
-                <div style="font-size: 1.9rem; font-weight: 700;">Autentificare</div>
-                <div style="font-size: 0.95rem; opacity: 0.78; margin-top: 0.3rem;">
-                    Intră în contul tău MedicSync
+        _, col, _ = st.columns([1, 1.3, 1])
+        with col:
+            if st.session_state.get("session_expired"):
+                st.warning("Sesiunea ta a expirat. Te rugăm să te autentifici din nou.")
+                st.session_state.session_expired = False
+
+            st.markdown("""
+                <div style="
+                    text-align: center; color: white;
+                    text-shadow: 0 1px 8px rgba(0,0,0,0.7);
+                    margin-bottom: 1.2rem;
+                ">
+                    <div style="font-size: 1.9rem; font-weight: 700;">Autentificare</div>
+                    <div style="font-size: 0.95rem; opacity: 0.78; margin-top: 0.3rem;">
+                        Intră în contul tău MedicSync
+                    </div>
                 </div>
-            </div>
-        """, unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
 
-        with st.form("login_form", clear_on_submit=False):
-            email = st.text_input("Email", placeholder="medic@spital.ro")
-            password = st.text_input("Parolă", type="password", placeholder="••••••••")
-            st.markdown("")
+            with st.form("login_form", clear_on_submit=False):
+                email = st.text_input("Email", placeholder="medic@spital.ro")
+                password = st.text_input("Parolă", type="password", placeholder="••••••••")
+                st.markdown("")
 
-            col_btn1, col_btn2 = st.columns(2)
-            with col_btn1:
-                submit = st.form_submit_button("Conectare", use_container_width=True, type="primary")
-            with col_btn2:
-                back = st.form_submit_button("Înapoi", use_container_width=True)
+                col_btn1, col_btn2 = st.columns(2)
+                with col_btn1:
+                    submit = st.form_submit_button("Conectare", use_container_width=True, type="primary")
+                with col_btn2:
+                    back = st.form_submit_button("Înapoi", use_container_width=True)
 
-            if submit:
-                if not email or not password:
-                    st.error("Completează email și parola!")
-                else:
-                    try:
-                        import cache as _cache
-                        api_client = st.session_state.api_client
-                        api_client.login(email, password)
-                        user = api_client.get_current_user()
-                        st.session_state.authenticated = True
-                        st.session_state.user = user
-                        st.session_state.auth_view = "landing"
-                        # Pornește prefetch înainte de rerun — cache-ul e gata când se randează home
-                        _cache.prefetch_all_async(api_client.token)
-                        st.session_state.cache_warmed = True
-                        st.rerun()
-                    except requests.exceptions.HTTPError as e:
-                        if e.response.status_code == 401:
-                            st.error("Email sau parolă incorectă!")
-                        else:
+                if submit:
+                    if not email or not password:
+                        st.error("Completează email și parola!")
+                    else:
+                        try:
+                            import cache as _cache
+                            api_client = st.session_state.api_client
+                            api_client.login(email, password)
+                            user = api_client.get_current_user()
+                            st.session_state.authenticated = True
+                            st.session_state.user = user
+                            st.session_state.auth_view = "landing"
+                            _cache.prefetch_all_async(api_client.token)
+                            st.session_state.cache_warmed = True
+                            main.empty()
+                            st.rerun()
+                        except requests.exceptions.HTTPError as e:
+                            if e.response.status_code == 401:
+                                st.error("Email sau parolă incorectă!")
+                            else:
+                                st.error(f"Eroare: {str(e)}")
+                        except Exception as e:
                             st.error(f"Eroare: {str(e)}")
-                    except Exception as e:
-                        st.error(f"Eroare: {str(e)}")
 
-            if back:
-                st.session_state.auth_view = "landing"
-                st.rerun()
+                if back:
+                    main.empty()
+                    st.session_state.auth_view = "landing"
+                    st.rerun()
 
     st.markdown("""
         <p style="

@@ -176,7 +176,6 @@ try:
                         st.balloons()
                         cache.get_departments.clear()
                         cache.get_hospital_stats.clear()
-                        import time; time.sleep(2)
                         st.rerun()
                     except Exception as e:
                         if "409" in str(e) or "există deja" in str(e).lower():

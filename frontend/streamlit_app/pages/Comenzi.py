@@ -320,7 +320,7 @@ if tab_new is not None:
                                 st.success(f"Comanda #{order['id']} a fost creată și plasată spre aprobare!")
                                 st.session_state.order_rows = [{"inv_id": None, "qty": 1, "price": 0.0}]
                                 refresh_orders()
-                                import time; time.sleep(1); st.rerun()
+                                st.rerun()
                             except Exception as e:
                                 if not handle_api_exception(e):
                                     st.error(f"Eroare: {str(e)}")

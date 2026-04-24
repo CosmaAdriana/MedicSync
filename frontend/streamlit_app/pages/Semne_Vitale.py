@@ -17,7 +17,7 @@ from datetime import datetime
 import pandas as pd
 
 st.set_page_config(page_title="Semne Vitale", page_icon="💓", layout="wide", initial_sidebar_state="auto")
-require_auth(allowed_roles=["nurse", "doctor", "manager"])
+require_auth(allowed_roles=["nurse", "doctor"])
 render_top_nav()
 
 RISK_LABELS = {
@@ -73,8 +73,12 @@ try:
     # ========================================================================
     # Fetch Vitals and Alerts — cached per patient
     # ========================================================================
-    vitals = cache.get_patient_vitals(api.token, patient_id)
-    alerts = cache.get_patient_alerts(api.token, patient_id)
+    _vit_alrt = cache.fetch_parallel(
+        vitals = (cache.get_patient_vitals, api.token, patient_id),
+        alerts = (cache.get_patient_alerts, api.token, patient_id),
+    )
+    vitals = _vit_alrt["vitals"]
+    alerts = _vit_alrt["alerts"]
 
     # ========================================================================
     # Clinical Alerts Section
@@ -113,7 +117,9 @@ try:
                         api.resolve_alert(patient_id, alert['id'])
                         st.success("Alertă marcată ca rezolvată!")
                         cache.get_patient_alerts.clear()
-                        import time; time.sleep(1)
+                        cache.get_patients.clear()
+                        cache.get_hospital_stats.clear()
+                        cache.get_notifications_summary.clear()
                         st.rerun()
                     except Exception as e:
                         if not handle_api_exception(e):
@@ -248,7 +254,8 @@ try:
                     cache.get_patient_vitals.clear()
                     cache.get_patient_alerts.clear()
                     cache.get_patients.clear()
-                    import time; time.sleep(2)
+                    cache.get_hospital_stats.clear()
+                    cache.get_notifications_summary.clear()
                     st.rerun()
                 except Exception as e:
                     if not handle_api_exception(e):
