@@ -411,6 +411,25 @@ def manager_view(api):
     year = col_year.number_input("Anul", min_value=2024, max_value=2030,
                                   value=next_year, step=1)
 
+    # ── Auto-load grafic publicat ────────────────────────────────────────────
+    sched     = st.session_state.get("schedule_data")
+    s_dept    = st.session_state.get("schedule_dept")
+    s_year    = st.session_state.get("schedule_year")
+    s_month   = st.session_state.get("schedule_month")
+
+    if not (sched and s_dept == dept_id and s_year == int(year) and s_month == month):
+        try:
+            saved = cache.get_monthly_schedule(api.token, dept_id, int(year), month)
+            if saved and saved.get("schedule_data"):
+                loaded = json.loads(saved["schedule_data"])
+                loaded["is_finalized"] = saved.get("is_finalized", False)
+                st.session_state["schedule_data"] = loaded
+                st.session_state["schedule_dept"] = dept_id
+                st.session_state["schedule_year"] = int(year)
+                st.session_state["schedule_month"] = month
+        except Exception:
+            pass
+
     st.divider()
 
     # ── Cereri în așteptare ──────────────────────────────────────────────────
@@ -443,6 +462,7 @@ def manager_view(api):
         try:
             saved = api.get_monthly_schedule(dept_id, int(year), month)
             loaded = json.loads(saved["schedule_data"])
+            loaded["is_finalized"] = saved.get("is_finalized", False)
             st.session_state["schedule_data"] = loaded
             st.session_state["schedule_dept"] = dept_id
             st.session_state["schedule_year"] = int(year)
@@ -517,6 +537,7 @@ def manager_view(api):
                         is_finalized=False,
                     )
                     st.session_state["schedule_data"] = updated
+                    cache.get_monthly_schedule.clear()
                     st.success("Grafic salvat!")
                     st.rerun()
                 except Exception as e:
@@ -534,6 +555,7 @@ def manager_view(api):
                         is_finalized=True,
                     )
                     st.session_state["schedule_data"] = updated
+                    cache.get_monthly_schedule.clear()
                     st.success("Grafic finalizat!")
                     st.rerun()
                 except Exception as e:
@@ -577,6 +599,7 @@ def manager_view(api):
                 updated = dict(sched)
                 updated["is_finalized"] = True
                 st.session_state["schedule_data"] = updated
+                cache.get_monthly_schedule.clear()
                 st.success(f"Grafic publicat! Asistentele din {dept_name} îl pot vedea acum.")
                 st.rerun()
             except Exception as e:

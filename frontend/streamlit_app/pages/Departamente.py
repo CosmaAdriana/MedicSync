@@ -134,6 +134,17 @@ try:
     # ========================================================================
     st.subheader("Adaugă departament")
 
+    DIFFICULTY_LABELS = {
+        "low":    "Scăzut — secție cu flux redus de pacienți",
+        "medium": "Mediu — secție standard",
+        "high":   "Ridicat — ATI, urgențe, secții cu volum mare",
+    }
+    DIFFICULTY_HELP = {
+        "low":    "2 asistente/tură, max 5 zile consecutive, max 10 nopți/lună",
+        "medium": "3D/2A/2N asistente, max 4 zile consecutive, max 9 nopți/lună",
+        "high":   "3D/3A/2N asistente, max 4 zile consecutive, max 8 nopți/lună",
+    }
+
     if user_role == "manager":
         with st.form("new_department", clear_on_submit=True):
             col1, col2 = st.columns([1, 2])
@@ -144,6 +155,14 @@ try:
                     placeholder="ex: Neurologie",
                     help="Numele departamentului (obligatoriu)"
                 )
+                difficulty = st.selectbox(
+                    "Dificultate *",
+                    options=["low", "medium", "high"],
+                    index=1,
+                    format_func=lambda x: DIFFICULTY_LABELS[x],
+                    help="Determină câte asistente sunt necesare per tură și constrângerile de odihnă",
+                )
+                st.caption(DIFFICULTY_HELP[difficulty])
 
             with col2:
                 description = st.text_area(
@@ -170,7 +189,8 @@ try:
                     try:
                         result = api.create_department(
                             name=name.strip(),
-                            description=description.strip() if description else None
+                            description=description.strip() if description else None,
+                            difficulty=difficulty,
                         )
                         st.success(f"Departament **{result['name']}** creat cu succes!")
                         st.balloons()

@@ -28,7 +28,7 @@ _NAV_ICONS = {
     "Inventar":       _icon('<path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>'),
     "Comenzi":        _icon('<circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>'),
     "Predicții Stoc": _icon('<polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>'),
-    "Predicții ML":   _icon('<path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/>'),
+    "Analiză Predictivă": _icon('<path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/>'),
     "Grafic Lunar":   _icon('<rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/>'),
 }
 
@@ -153,7 +153,7 @@ PAGES = [
     {"path": "pages/Inventar.py",        "label": "Inventar",       "roles": ["manager", "inventory_manager", "nurse"]},
     {"path": "pages/Comenzi.py",         "label": "Comenzi",        "roles": ["manager", "inventory_manager"]},
     {"path": "pages/Predicții_Stoc.py",  "label": "Predicții Stoc", "roles": ["manager", "inventory_manager"]},
-    {"path": "pages/Predicții_ML.py",    "label": "Predicții ML",   "roles": ["manager"]},
+    {"path": "pages/Predicții_ML.py",    "label": "Analiză Predictivă", "roles": ["manager"]},
     {"path": "pages/Grafic.py",          "label": "Grafic Lunar",   "roles": ["nurse", "manager"]},
 ]
 

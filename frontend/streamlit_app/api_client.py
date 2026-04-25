@@ -106,9 +106,9 @@ class APIClient:
         """Get all departments."""
         return self.get("/departments/")
 
-    def create_department(self, name: str, description: str = None) -> Dict:
+    def create_department(self, name: str, description: str = None, difficulty: str = "medium") -> Dict:
         """Create new department (manager only)."""
-        return self.post("/departments/", {"name": name, "description": description})
+        return self.post("/departments/", {"name": name, "description": description, "difficulty": difficulty})
 
     # ========== Patients ==========
 

@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..deps import require_role
-from ..models import Department, User
+from ..models import Department, DifficultyEnum, User
 from ..schemas import DepartmentCreate, DepartmentOut
 
 router = APIRouter(prefix="/departments", tags=["Departments"])
@@ -41,7 +41,11 @@ def create_department(
             detail=f"Departamentul '{dept_in.name}' există deja.",
         )
 
-    dept = Department(name=dept_in.name, description=dept_in.description)
+    dept = Department(
+        name=dept_in.name,
+        description=dept_in.description,
+        difficulty=DifficultyEnum(dept_in.difficulty),
+    )
     db.add(dept)
     db.commit()
     db.refresh(dept)

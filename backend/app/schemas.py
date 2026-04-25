@@ -47,6 +47,7 @@ class UserOut(BaseModel):
 class DepartmentCreate(BaseModel):
     name: str
     description: Optional[str] = None
+    difficulty: str = "medium"
 
 
 class DepartmentOut(BaseModel):
@@ -55,6 +56,7 @@ class DepartmentOut(BaseModel):
     id: int
     name: str
     description: Optional[str]
+    difficulty: str
 
 
 # ========================== Patient =======================================

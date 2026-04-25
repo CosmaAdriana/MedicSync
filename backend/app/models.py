@@ -20,6 +20,12 @@ class RoleEnum(str, enum.Enum):
     inventory_manager = "inventory_manager"
 
 
+class DifficultyEnum(str, enum.Enum):
+    low    = "low"
+    medium = "medium"
+    high   = "high"
+
+
 class PatientStatusEnum(str, enum.Enum):
     admitted = "admitted"
     discharged = "discharged"
@@ -47,6 +53,7 @@ class Department(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False, unique=True)
     description = Column(Text, nullable=True)
+    difficulty = Column(Enum(DifficultyEnum), nullable=False, default=DifficultyEnum.medium)
 
     patients = relationship("Patient", back_populates="department")
     shifts = relationship("Shift", back_populates="department")

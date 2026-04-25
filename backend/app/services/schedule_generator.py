@@ -16,7 +16,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from ..models import User, RoleEnum, VacationRequest, VacationRequestStatusEnum, RequestTypeEnum
+from ..models import User, RoleEnum, VacationRequest, VacationRequestStatusEnum, RequestTypeEnum, Department, DifficultyEnum
 
 SHIFT_D = "D"
 SHIFT_A = "A"
@@ -27,33 +27,28 @@ SHIFT_C = "C"
 WORKING_SHIFTS = {SHIFT_D, SHIFT_A, SHIFT_N}
 DEFAULT_TEMP = 18.0
 
-# Per-department constraints; fallback to DEFAULT_PROFILE for unknown departments
-DEPT_PROFILES: dict[int, dict] = {
-    2: {"shifts_needed": {"D": 3, "A": 3, "N": 2}, "max_consecutive": 4,
-        "max_nights_per_month": 8,  "min_rest_after_night": 2, "max_consecutive_nights": 2},
-    3: {"shifts_needed": {"D": 2, "A": 2, "N": 2}, "max_consecutive": 5,
-        "max_nights_per_month": 10, "min_rest_after_night": 2, "max_consecutive_nights": 3},
-    4: {"shifts_needed": {"D": 2, "A": 2, "N": 2}, "max_consecutive": 5,
-        "max_nights_per_month": 10, "min_rest_after_night": 2, "max_consecutive_nights": 3},
-    5: {"shifts_needed": {"D": 3, "A": 2, "N": 2}, "max_consecutive": 4,
-        "max_nights_per_month": 9,  "min_rest_after_night": 2, "max_consecutive_nights": 2},
-    6: {"shifts_needed": {"D": 3, "A": 3, "N": 2}, "max_consecutive": 4,
-        "max_nights_per_month": 8,  "min_rest_after_night": 2, "max_consecutive_nights": 2},
-    7: {"shifts_needed": {"D": 2, "A": 2, "N": 2}, "max_consecutive": 5,
-        "max_nights_per_month": 10, "min_rest_after_night": 2, "max_consecutive_nights": 3},
-}
-
-DEFAULT_PROFILE: dict = {
-    "shifts_needed": {"D": 2, "A": 2, "N": 2},
-    "max_consecutive": 5,
-    "max_nights_per_month": 10,
-    "min_rest_after_night": 2,
-    "max_consecutive_nights": 3,
+DIFFICULTY_PROFILES: dict[str, dict] = {
+    "low": {
+        "shifts_needed": {"D": 2, "A": 2, "N": 2},
+        "max_consecutive": 5, "max_nights_per_month": 10,
+        "min_rest_after_night": 2, "max_consecutive_nights": 3,
+    },
+    "medium": {
+        "shifts_needed": {"D": 3, "A": 2, "N": 2},
+        "max_consecutive": 4, "max_nights_per_month": 9,
+        "min_rest_after_night": 2, "max_consecutive_nights": 2,
+    },
+    "high": {
+        "shifts_needed": {"D": 3, "A": 3, "N": 2},
+        "max_consecutive": 4, "max_nights_per_month": 8,
+        "min_rest_after_night": 2, "max_consecutive_nights": 2,
+    },
 }
 
 
-def _get_profile(department_id: int) -> dict:
-    return DEPT_PROFILES.get(department_id, DEFAULT_PROFILE)
+def _get_profile(dept: Department) -> dict:
+    key = dept.difficulty.value if dept and dept.difficulty else "medium"
+    return DIFFICULTY_PROFILES.get(key, DIFFICULTY_PROFILES["medium"])
 
 
 def _compute_shift_targets(num_nurses: int, profile: dict) -> dict[str, int]:
@@ -169,7 +164,8 @@ def generate_monthly_schedule(
     if not nurses:
         return {"nurses": [], "schedule": {}, "daily_stats": {}, "violations": [], "targets": {}}
 
-    profile    = _get_profile(department_id)
+    dept       = db.query(Department).filter(Department.id == department_id).first()
+    profile    = _get_profile(dept)
     nurse_ids  = [n.id for n in nurses]
     num_nurses = len(nurses)
     num_days   = calendar.monthrange(year, month)[1]
