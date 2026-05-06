@@ -40,6 +40,13 @@ class UserOut(BaseModel):
     email: str
     role: str
     department_id: Optional[int] = None
+    is_active: bool = False
+
+
+class ManagerCreate(BaseModel):
+    full_name: str
+    email: str
+    password: str
 
 
 # ========================== Department ====================================
@@ -342,6 +349,7 @@ class ScheduleSaveRequest(BaseModel):
 
 class FefoAlertOut(BaseModel):
     """Single item in GET /inventory/fefo-alerts response."""
+    id: int
     product_name: str
     current_stock: int
     expiration_date: date

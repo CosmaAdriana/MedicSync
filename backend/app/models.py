@@ -69,6 +69,7 @@ class User(Base):
     password_hash = Column(String(255), nullable=False)
     role = Column(Enum(RoleEnum), nullable=False, default=RoleEnum.nurse)
     department_id = Column(Integer, ForeignKey("departments.id"), nullable=True, index=True)
+    is_active = Column(Boolean, nullable=False, default=False)
 
     shifts = relationship("Shift", back_populates="user")
     department = relationship("Department", foreign_keys=[department_id])

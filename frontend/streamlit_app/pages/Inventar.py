@@ -186,15 +186,55 @@ if tab_alerte is not None:
                 c3.metric("Avertisment",        len([a for a in fefo_alerts if a['severity'] == 'warning']))
 
                 st.markdown("---")
+
+                expired_ids = [a['id'] for a in fefo_alerts if a['severity'] == 'expired']
+                if expired_ids:
+                    col_btn_all, _ = st.columns([2, 4])
+                    with col_btn_all:
+                        if st.button(
+                            f"Șterge toate produsele expirate ({len(expired_ids)})",
+                            type="primary",
+                            use_container_width=True,
+                            key="delete_all_expired",
+                        ):
+                            errors = []
+                            for eid in expired_ids:
+                                try:
+                                    api.delete_inventory_item(eid)
+                                except Exception as ex:
+                                    errors.append(str(ex))
+                            if errors:
+                                st.error(f"Erori la ștergere: {'; '.join(errors)}")
+                            else:
+                                st.success(f"{len(expired_ids)} produs(e) expirate șterse!")
+                            cache.get_inventory.clear()
+                            cache.get_fefo_alerts.clear()
+                            st.rerun()
+
                 for alert in fefo_alerts:
                     days  = alert['days_until_expiry']
                     exp_d = pd.to_datetime(alert['expiration_date']).strftime('%d.%m.%Y')
                     days_text = f"Expirat de **{abs(days)} zile**" if days < 0 else f"Expiră în **{days} zile**"
 
                     msg = f"**{alert['product_name']}** — {days_text} | Expirare: {exp_d} | Stoc: {alert['current_stock']}"
-                    if alert['severity'] == 'expired':    st.error(msg)
-                    elif alert['severity'] == 'critical': st.warning(msg)
-                    else:                                 st.info(msg)
+                    col_msg, col_del = st.columns([6, 1])
+                    with col_msg:
+                        if alert['severity'] == 'expired':    st.error(msg)
+                        elif alert['severity'] == 'critical': st.warning(msg)
+                        else:                                 st.info(msg)
+                    with col_del:
+                        st.markdown("<div style='margin-top:0.35rem'>", unsafe_allow_html=True)
+                        if st.button("Șterge", key=f"del_{alert['id']}", use_container_width=True):
+                            try:
+                                api.delete_inventory_item(alert['id'])
+                                st.success(f"**{alert['product_name']}** șters din inventar.")
+                                cache.get_inventory.clear()
+                                cache.get_fefo_alerts.clear()
+                                st.rerun()
+                            except Exception as e:
+                                if not handle_api_exception(e):
+                                    st.error(f"Eroare: {str(e)}")
+                        st.markdown("</div>", unsafe_allow_html=True)
 
         except Exception as e:
             if not handle_api_exception(e):

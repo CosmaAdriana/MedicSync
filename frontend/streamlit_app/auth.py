@@ -274,6 +274,8 @@ def login_page():
                         except requests.exceptions.HTTPError as e:
                             if e.response.status_code == 401:
                                 st.error("Email sau parolă incorectă!")
+                            elif e.response.status_code == 403:
+                                st.warning("Contul tău nu a fost aprobat încă. Contactează un manager.")
                             else:
                                 st.error(f"Eroare: {str(e)}")
                         except Exception as e:
@@ -316,11 +318,10 @@ def register_page():
 
         role = st.selectbox(
             "Rol",
-            options=["nurse", "doctor", "manager", "inventory_manager"],
+            options=["nurse", "doctor", "inventory_manager"],
             format_func=lambda x: {
                 "nurse": "Asistent Medical",
                 "doctor": "Doctor",
-                "manager": "Manager",
                 "inventory_manager": "Manager Inventar"
             }[x],
             key="register_role"
@@ -369,14 +370,11 @@ def register_page():
                     try:
                         api_client = st.session_state.api_client
                         result = api_client.register(full_name, email, password, role, dept_id)
-                        st.success(f"Cont creat cu succes pentru {result['full_name']}!")
-                        api_client.login(email, password)
-                        user = api_client.get_current_user()
-                        st.session_state.authenticated = True
-                        st.session_state.user = user
-                        st.session_state.auth_view = "landing"
-                        st.balloons()
-                        st.rerun()
+                        st.success(
+                            f"Cont creat pentru **{result['full_name']}**! "
+                            "Un manager va aproba accesul tău în scurt timp."
+                        )
+                        st.info("Revino la autentificare după ce primești confirmarea aprobării.")
                     except requests.exceptions.HTTPError as e:
                         if e.response.status_code == 409:
                             st.error("Email-ul este deja înregistrat!")

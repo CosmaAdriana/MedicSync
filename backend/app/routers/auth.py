@@ -66,6 +66,12 @@ def login(credentials: LoginRequest, db: Session = Depends(get_db)):
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Contul tău este în așteptarea aprobării unui manager.",
+        )
+
     access_token = create_access_token(
         data={"sub": user.email, "role": user.role.value},
         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
@@ -95,6 +101,7 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
         password_hash=hash_password(user_in.password),
         role=user_in.role,
         department_id=user_in.department_id,
+        is_active=False,
     )
     db.add(user)
     db.commit()

@@ -68,6 +68,7 @@ def get_fefo_alerts(
             severity = "warning"
 
         alerts.append(FefoAlertOut(
+            id=item.id,
             product_name=item.product_name,
             current_stock=item.current_stock,
             expiration_date=item.expiration_date,
@@ -76,6 +77,23 @@ def get_fefo_alerts(
         ))
 
     return alerts
+
+
+@router.delete("/{item_id}", status_code=204)
+def delete_inventory_item(
+    item_id: int,
+    current_user: User = Depends(require_role("inventory_manager", "manager")),
+    db: Session = Depends(get_db),
+):
+    """Delete an inventory item (inventory_manager or manager only)."""
+    item = db.query(InventoryItem).filter(InventoryItem.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail=f"Produsul cu ID {item_id} nu a fost găsit.")
+    if current_user.role.value == "inventory_manager" and current_user.department_id:
+        if item.department_id != current_user.department_id:
+            raise HTTPException(status_code=403, detail="Nu ai permisiunea să ștergi produse din alt departament.")
+    db.delete(item)
+    db.commit()
 
 
 @router.post("/", response_model=InventoryItemOut, status_code=201)

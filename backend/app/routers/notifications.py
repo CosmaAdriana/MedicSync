@@ -59,8 +59,18 @@ def notifications_summary(
             .scalar()
         ) or 0
 
+    # Conturi de personal în așteptare (doar manager)
+    pending_users = 0
+    if role == "manager":
+        pending_users = (
+            db.query(func.count(User.id))
+            .filter(User.is_active == False)  # noqa: E712
+            .scalar()
+        ) or 0
+
     return {
         "critical_alerts": critical_alerts,
         "pending_orders": pending_orders,
         "pending_vacation_requests": pending_vacation,
+        "pending_users": pending_users,
     }

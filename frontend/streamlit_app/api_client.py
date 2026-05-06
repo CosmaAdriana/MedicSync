@@ -209,6 +209,10 @@ class APIClient:
             data["expiration_date"] = expiration_date
         return self.put(f"/inventory/{item_id}", data)
 
+    def delete_inventory_item(self, item_id: int) -> None:
+        """Delete an inventory item (inventory_manager or manager only)."""
+        self.delete(f"/inventory/{item_id}")
+
     # ========== Predictions (ML) ==========
 
     def predict_staff_needs(self, date: str, department_id: int, weather_temp: float,
@@ -328,4 +332,37 @@ class APIClient:
             "month": month,
             "schedule_data": schedule_data,
             "is_finalized": is_finalized,
+        })
+
+    # ========== Users / Personal ==========
+
+    def get_pending_users(self) -> list:
+        """Returnează conturile în așteptare (manager only)."""
+        return self.get("/users/pending")
+
+    def get_staff_users(self, role: str = None) -> list:
+        """Returnează personalul (activ + inactiv), filtrat opțional pe rol."""
+        params = {"role": role} if role else {}
+        return self.get("/users/staff", params=params)
+
+    def activate_user(self, user_id: int) -> Dict:
+        """Aprobă un cont de personal."""
+        url = f"{self.base_url}/users/{user_id}/activate"
+        return self._check(self._session.patch(url, headers=self._headers())).json()
+
+    def deactivate_user(self, user_id: int) -> Dict:
+        """Dezactivează un cont de personal."""
+        url = f"{self.base_url}/users/{user_id}/deactivate"
+        return self._check(self._session.patch(url, headers=self._headers())).json()
+
+    def delete_user(self, user_id: int) -> None:
+        """Șterge definitiv un cont."""
+        self.delete(f"/users/{user_id}")
+
+    def create_manager(self, full_name: str, email: str, password: str) -> Dict:
+        """Creează un cont de manager direct (activ imediat)."""
+        return self.post("/users/manager", {
+            "full_name": full_name,
+            "email": email,
+            "password": password,
         })

@@ -208,4 +208,5 @@ __marimo__/
 
 # SQLite database
 *.db
-*.db-shm\n*.db-wal
+*.db-shm
+*.db-wal
