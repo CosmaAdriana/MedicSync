@@ -7,8 +7,10 @@ GET /predict/inventory    — safety stock calculation (SS = Z · σ_L · √D_a
 
 import math
 from datetime import date
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from ..database import get_db
@@ -35,14 +37,19 @@ def get_model_info(
         col: round(float(imp), 4)
         for col, imp in zip(feature_cols, model.feature_importances_)
     }
-    return {
+    result = {
         "r2": round(float(bundle["r2"]), 4),
         "mae": round(float(bundle["mae"]), 2),
-        "n_estimators": model.n_estimators,
-        "max_depth": model.max_depth,
         "patients_per_nurse": bundle["patients_per_nurse"],
         "feature_importances": dict(sorted(importances.items(), key=lambda x: -x[1])),
+        "best_model_name": bundle.get("best_model_name", "Random Forest"),
+        "models_comparison": bundle.get("models_comparison", []),
     }
+    if hasattr(model, "n_estimators"):
+        result["n_estimators"] = model.n_estimators
+    if hasattr(model, "max_depth"):
+        result["max_depth"] = model.max_depth
+    return result
 
 
 @router.get("/staff-needs", response_model=StaffPredictionOut)
@@ -64,6 +71,35 @@ def get_staff_prediction(
                                    department_id, department.name)
     except FileNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e))
+
+
+class InterpretRequest(BaseModel):
+    predictions: list[dict[str, Any]]
+    target_date: str
+    is_holiday: bool = False
+    is_epidemic: bool = False
+    weather_temp: float = 15.0
+
+
+@router.post("/interpret")
+def interpret_predictions(
+    body: InterpretRequest,
+    current_user: User = Depends(require_role("manager")),
+):
+    try:
+        from ..services.llm_interpreter import interpret_staff_predictions
+        text = interpret_staff_predictions(
+            body.predictions,
+            body.target_date,
+            body.is_holiday,
+            body.is_epidemic,
+            body.weather_temp,
+        )
+        return {"interpretation": text}
+    except RuntimeError as e:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
 Z_SCORE = 1.65

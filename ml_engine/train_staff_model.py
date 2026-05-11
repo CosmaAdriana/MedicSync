@@ -1,22 +1,27 @@
 """
 MedicSync — ML Staff Prediction Model Training
-Trains a RandomForestRegressor on the `daily_patient_flow` historical data
+Trains and compares four regressors on the `daily_patient_flow` historical data
 to predict the number of patients (and therefore nurses needed) for a given day.
 
 Features:  month, day_of_week, weather_temp, is_holiday, is_epidemic, department_id
 Target:    patient_count
 
+Models compared: Linear Regression, Decision Tree, Random Forest, Gradient Boosting
+The best model by R² is saved as the active predictor.
 """
 
+import math
 import os
 import sys
 
 import joblib
 import numpy as np
 import pandas as pd
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.metrics import mean_absolute_error, r2_score
+from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeRegressor
 
 # ---------------------------------------------------------------------------
 # Path setup — allow importing from backend/app
@@ -101,44 +106,55 @@ def train():
 
     print(f"      → Train: {len(X_train)} | Test: {len(X_test)}")
 
-    # 4. Train model
-    print("[3/4] Se antrenează RandomForestRegressor...")
-    model = RandomForestRegressor(
-        n_estimators=100,
-        max_depth=12,
-        random_state=42,
-        n_jobs=-1,
-    )
-    model.fit(X_train, y_train)
+    # 4. Train & compare all models
+    CANDIDATES = {
+        "Regresie Liniară":   LinearRegression(),
+        "Arbore de Decizie":  DecisionTreeRegressor(max_depth=10, random_state=42),
+        "Random Forest":      RandomForestRegressor(n_estimators=100, max_depth=12, random_state=42, n_jobs=-1),
+        "Gradient Boosting":  GradientBoostingRegressor(n_estimators=100, max_depth=5, random_state=42),
+    }
 
-    # 5. Evaluate
-    y_pred = model.predict(X_test)
-    mae = mean_absolute_error(y_test, y_pred)
-    r2 = r2_score(y_test, y_pred)
+    print("[3/4] Se antrenează și compară modelele...\n")
+    comparison = []
+    best_model, best_r2, best_mae, best_rmse = None, -999, None, None
 
-    print(f"\n      Metrici pe setul de test:")
-    print(f"        MAE  = {mae:.2f} pacienți")
-    print(f"        R²   = {r2:.4f}")
+    for name, candidate in CANDIDATES.items():
+        candidate.fit(X_train, y_train)
+        y_pred = candidate.predict(X_test)
+        r2   = r2_score(y_test, y_pred)
+        mae  = mean_absolute_error(y_test, y_pred)
+        rmse = math.sqrt(mean_squared_error(y_test, y_pred))
+        comparison.append({"name": name, "r2": round(r2, 4), "mae": round(mae, 2), "rmse": round(rmse, 2)})
+        print(f"  {name:<22}  R²={r2:.4f}  MAE={mae:.2f}  RMSE={rmse:.2f}")
+        if r2 > best_r2:
+            best_model, best_r2, best_mae, best_rmse = candidate, r2, mae, rmse
 
-    # Feature importance
-    importances = dict(zip(feature_cols, model.feature_importances_))
-    print(f"\n      Importanța feature-urilor:")
-    for feat, imp in sorted(importances.items(), key=lambda x: -x[1]):
-        print(f"        {feat:15s} → {imp:.4f}")
+    best_name = next(c["name"] for c in comparison if c["r2"] == round(best_r2, 4))
+    print(f"\n  → Cel mai bun model: {best_name} (R²={best_r2:.4f})")
 
-    # 6. Save model
+    # Feature importance (disponibil doar pt modele bazate pe arbori)
+    if hasattr(best_model, "feature_importances_"):
+        importances = dict(zip(feature_cols, best_model.feature_importances_))
+        print(f"\n  Importanța feature-urilor ({best_name}):")
+        for feat, imp in sorted(importances.items(), key=lambda x: -x[1]):
+            print(f"    {feat:15s} → {imp:.4f}")
+
+    # 5. Save bundle
     print(f"\n[4/4] Se salvează modelul în: {MODEL_PATH}")
     joblib.dump(
         {
-            "model": model,
+            "model": best_model,
+            "best_model_name": best_name,
             "feature_cols": feature_cols,
             "patients_per_nurse": PATIENTS_PER_NURSE,
-            "mae": mae,
-            "r2": r2,
+            "mae": best_mae,
+            "r2": best_r2,
+            "rmse": best_rmse,
+            "models_comparison": comparison,
         },
         MODEL_PATH,
     )
-    print("\nSUCCESS: Modelul a fost antrenat și salvat cu succes! ✅")
+    print("\nSUCCESS: Modelele au fost antrenate și salvate cu succes! ✅")
 
 
 if __name__ == "__main__":

@@ -16,7 +16,7 @@ from datetime import date, timedelta
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from components.chart_theme import apply as ct, bars as ct_bars, TEAL, TEAL_MID, SLATE_400, AMBER
+from components.chart_theme import apply as ct, bars as ct_bars, TEAL, TEAL_MID, SLATE_400, AMBER, RED
 
 st.set_page_config(page_title="Analiză Predictivă", page_icon="📊", layout="wide", initial_sidebar_state="auto")
 require_auth(allowed_roles=["manager"])
@@ -58,7 +58,12 @@ def _predict_all(token: str, pred_date: str, temp: int, holiday: bool, epidemic:
 
 # ── Header ────────────────────────────────────────────────────────────────────
 st.title("Analiză Predictivă")
-st.caption("Model RandomForest antrenat pe istoricul spitalului — estimează necesarul de personal pe departamente")
+try:
+    _info_for_caption = _get_model_info(st.session_state.api_client.token)
+    _active_model = _info_for_caption.get("best_model_name", "Random Forest")
+except Exception:
+    _active_model = "Random Forest"
+st.caption(f"Model {_active_model} antrenat pe istoricul spitalului — estimează necesarul de personal pe departamente")
 
 # ── Model KPIs + Feature Importance ──────────────────────────────────────────
 FEAT_LABELS = {
@@ -136,7 +141,7 @@ except Exception as e:
     st.stop()
 
 # ── Tabs ──────────────────────────────────────────────────────────────────────
-tab_azi, tab_trend = st.tabs(["Predicție Personal", "Trend"])
+tab_azi, tab_trend, tab_cmp = st.tabs(["Predicție Personal", "Trend", "Comparație Modele"])
 
 # ────────────────────────────────────────────────────────────────────────────
 # TAB 1 — Predicție automată pentru mâine (toate departamentele)
@@ -228,6 +233,32 @@ with tab_azi:
                     file_name=f"predictii_{target_date}.csv",
                     mime="text/csv",
                 )
+
+            st.markdown("")
+            ai_col, _ = st.columns([1, 3])
+            with ai_col:
+                if st.button("Generează raport AI", type="secondary",
+                             use_container_width=True, key="ai_interpret_btn"):
+                    with st.spinner("Analizez datele cu AI..."):
+                        try:
+                            result = api.interpret_predictions(
+                                predictions=df[["department_name", "predicted_patients",
+                                                "recommended_nurses"]].to_dict(orient="records"),
+                                target_date=str(target_date),
+                                is_holiday=is_holiday,
+                                is_epidemic=is_epidemic,
+                                weather_temp=float(weather_temp),
+                            )
+                            st.session_state["ai_interpretation"] = result["interpretation"]
+                        except Exception as e:
+                            if not handle_api_exception(e):
+                                st.error(f"Eroare la generarea raportului AI: {str(e)}")
+                            st.session_state.pop("ai_interpretation", None)
+
+            if st.session_state.get("ai_interpretation"):
+                st.markdown("#### Raport AI — Interpretare predicții")
+                st.info(st.session_state["ai_interpretation"])
+
         else:
             st.warning("Nu s-au putut genera predicții pentru data selectată.")
 
@@ -339,3 +370,95 @@ with tab_trend:
             st.markdown("")
             st.markdown("")
             st.info("Selectează departamentul și apasă **Generează trend** pentru a vizualiza evoluția pe mai multe zile.")
+
+# ────────────────────────────────────────────────────────────────────────────
+# TAB 3 — Comparație modele ML
+# ────────────────────────────────────────────────────────────────────────────
+with tab_cmp:
+    try:
+        cmp_info = _get_model_info(api.token)
+        comparison = cmp_info.get("models_comparison", [])
+        best_name  = cmp_info.get("best_model_name", "")
+
+        if not comparison:
+            st.info("Rulează scriptul de antrenament pentru a vedea comparația modelelor: `python ml_engine/train_staff_model.py`")
+        else:
+            st.markdown(
+                f"Patru algoritmi de regresie au fost antrenați pe același set de date istorice. "
+                f"Modelul activ pentru predicții este **{best_name}** (cel mai mare R²)."
+            )
+            st.markdown("")
+
+            df_cmp = pd.DataFrame(comparison)
+            df_cmp["Cel mai bun"] = df_cmp["name"] == best_name
+
+            # ── Metrici sumar ────────────────────────────────────────────────
+            cols = st.columns(len(comparison))
+            for col, row in zip(cols, sorted(comparison, key=lambda x: -x["r2"])):
+                is_best = row["name"] == best_name
+                with col:
+                    label = f"{'★ ' if is_best else ''}{row['name']}"
+                    col.metric(label, f"R² {row['r2']*100:.1f}%", f"MAE {row['mae']} pac.")
+
+            st.markdown("")
+
+            # ── Grafice comparație ───────────────────────────────────────────
+            colors = [TEAL if r["name"] == best_name else SLATE_400 for r in comparison]
+
+            col_r2, col_mae = st.columns(2)
+
+            with col_r2:
+                fig_r2 = go.Figure(go.Bar(
+                    x=[r["name"] for r in comparison],
+                    y=[round(r["r2"] * 100, 1) for r in comparison],
+                    text=[f"{round(r['r2']*100,1)}%" for r in comparison],
+                    textposition="outside",
+                    marker_color=colors,
+                    marker_line_width=0,
+                ))
+                ct(fig_r2, title="R² — Acuratețe model (%)", height=320, legend=False)
+                fig_r2.update_layout(yaxis=dict(range=[0, 110]))
+                st.plotly_chart(fig_r2, use_container_width=True)
+
+            with col_mae:
+                fig_mae = go.Figure(go.Bar(
+                    x=[r["name"] for r in comparison],
+                    y=[r["mae"] for r in comparison],
+                    text=[f"{r['mae']} pac." for r in comparison],
+                    textposition="outside",
+                    marker_color=list(reversed(colors)),
+                    marker_line_width=0,
+                ))
+                ct(fig_mae, title="MAE — Eroare medie absolută (pacienți)", height=320, legend=False)
+                st.plotly_chart(fig_mae, use_container_width=True)
+
+            fig_rmse = go.Figure(go.Bar(
+                x=[r["name"] for r in comparison],
+                y=[r["rmse"] for r in comparison],
+                text=[f"{r['rmse']}" for r in comparison],
+                textposition="outside",
+                marker_color=colors,
+                marker_line_width=0,
+            ))
+            ct(fig_rmse, title="RMSE — Rădăcina erorii pătratice medii (pacienți)", height=300, legend=False)
+            st.plotly_chart(fig_rmse, use_container_width=True)
+
+            # ── Tabel complet ────────────────────────────────────────────────
+            with st.expander("Tabel detaliat", expanded=False):
+                tbl = pd.DataFrame([{
+                    "Model": ("★ " if r["name"] == best_name else "") + r["name"],
+                    "R² (%)": f"{r['r2']*100:.1f}%",
+                    "MAE (pacienți)": r["mae"],
+                    "RMSE (pacienți)": r["rmse"],
+                } for r in sorted(comparison, key=lambda x: -x["r2"])])
+                st.dataframe(tbl, use_container_width=True, hide_index=True)
+
+            st.caption(
+                "R² = procentul din variație explicat (mai mare = mai bun). "
+                "MAE și RMSE = eroarea medie față de valorile reale (mai mic = mai bun). "
+                "RMSE penalizează mai mult erorile mari față de MAE."
+            )
+
+    except Exception as e:
+        if not handle_api_exception(e):
+            st.error(f"Eroare la încărcarea comparației: {str(e)}")

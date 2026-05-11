@@ -36,7 +36,13 @@ class APIClient:
         """Verifică răspunsul; ridică SessionExpiredException la 401 doar când utilizatorul era deja autentificat."""
         if response.status_code == 401 and self.token:
             raise SessionExpiredException("Sesiunea a expirat.")
-        response.raise_for_status()
+        if not response.ok:
+            try:
+                detail = response.json().get("detail", response.text)
+            except Exception:
+                detail = response.text
+            from requests.exceptions import HTTPError
+            raise HTTPError(f"{response.status_code}: {detail}", response=response)
         return response
 
     def set_token(self, token: str):
@@ -245,6 +251,18 @@ class APIClient:
     def predict_inventory_safety_stock(self, lead_time_std: float = 2.0) -> list:
         """Get safety stock predictions for inventory."""
         return self.get("/predict/inventory", params={"lead_time_std": lead_time_std})
+
+    def interpret_predictions(self, predictions: list, target_date: str,
+                              is_holiday: bool = False, is_epidemic: bool = False,
+                              weather_temp: float = 15.0) -> Dict:
+        """Generate AI natural language interpretation of staff predictions."""
+        return self.post("/predict/interpret", {
+            "predictions": predictions,
+            "target_date": target_date,
+            "is_holiday": is_holiday,
+            "is_epidemic": is_epidemic,
+            "weather_temp": weather_temp,
+        })
 
     # ========== Notifications ==========
 
